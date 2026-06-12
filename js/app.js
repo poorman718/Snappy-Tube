@@ -1147,4 +1147,33 @@ skullCheckboxDrawer.addEventListener('change', function() {
   setMode('single');
   applyModeVisibility();
   renderHistory();
+
+   // Skull toggle checkboxes
+const skullCheckHeader = document.getElementById('skullCheckHeader');
+const skullCheckDrawer = document.getElementById('skullCheckDrawer');
+
+function updateSkullCheckboxes(theme) {
+  const isDark = theme === 'dark';
+  if (skullCheckHeader) skullCheckHeader.checked = isDark;
+  if (skullCheckDrawer) skullCheckDrawer.checked = isDark;
+}
+
+// Override setTheme to sync checkboxes
+const originalSetTheme = setTheme;
+setTheme = function(theme) {
+  originalSetTheme(theme);
+  updateSkullCheckboxes(theme);
+};
+
+// Initial sync
+updateSkullCheckboxes(localStorage.getItem('snapytok-theme') || 'light');
+
+// Listen to changes
+skullCheckHeader.addEventListener('change', function() {
+  setTheme(this.checked ? 'dark' : 'light');
+});
+skullCheckDrawer.addEventListener('change', function() {
+  setTheme(this.checked ? 'dark' : 'light');
+});
+   
 })();
