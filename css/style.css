@@ -1785,3 +1785,36 @@ body[data-bg-mode='photo'] .bg-noise {
     height: 48px;
     margin: 8px auto;
 }
+
+
+/* ===== Skull Toggle Container ===== */
+.skull-toggle-wrap {
+  --sz: 10vmin;
+  display: inline-block;
+  width: 32px;                 /* final visible width */
+  height: 20px;                /* final visible height */
+  position: relative;
+  overflow: hidden;
+  transform: scale(0.4);       /* shrinks the entire toggle */
+  transform-origin: left center;
+  margin-left: 10px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* Mobile drawer – slightly larger */
+.skull-toggle-wrap.drawer-toggle {
+  transform: scale(0.6);
+  width: 50px;
+  height: 30px;
+  margin: 12px auto;
+  display: block;
+}
+
+/* Ensure the internal toggle is positioned correctly */
+.skull-toggle-wrap .toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
