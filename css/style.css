@@ -1460,361 +1460,77 @@ body[data-bg-mode='photo'] .bg-noise {
   }
 }
 
-/* ===== SKULL THEME TOGGLE ===== */
-.theme-toggle-wrapper {
-    --sz: 10vmin;                /* base size (large) */
-    --ttf: ease-in-out;
-    --bone: #888;
+/* ===== SKULL THEME TOGGLE (SIMPLE VERSION) ===== */
+.skull-switch {
+    position: relative;
     display: inline-block;
-    width: 60px;                 /* desired visible width */
-    height: 36px;                /* desired visible height */
-    overflow: hidden;
-    position: relative;
-    transform: scale(0.35);      /* scale down to fit header */
-    transform-origin: top left;
-    margin-left: 8px;
+    width: 50px;
+    height: 26px;
     cursor: pointer;
 }
 
-/* Prevent the toggle from affecting other parts */
-.theme-toggle-wrapper *,
-.theme-toggle-wrapper *:before,
-.theme-toggle-wrapper *:after {
-    box-sizing: border-box;
+.skull-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
-/* Scoped toggle positioning */
-.theme-toggle-wrapper .toggle {
-    position: relative;
-    width: calc(var(--sz) * 5);
-    height: calc(var(--sz) * 3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.theme-toggle-wrapper input {
-    display: none;
-}
-
-.theme-toggle-wrapper label[for=themeToggleCheckbox],
-.theme-toggle-wrapper label[for=themeToggleCheckboxDrawer] {
+.skull-slider {
     position: absolute;
-    width: calc(var(--sz) * 4);
-    height: calc(var(--sz) * 2);
-    background: #141414;
-    border-radius: var(--sz);
-    overflow: hidden;
-    box-shadow: 0 0 calc(var(--sz) / 50) calc(var(--sz) / 50) #000000, 0 0 calc(var(--sz) / 10) calc(var(--sz) / 50) #0b0b10 inset;
-}
-
-.theme-toggle-wrapper .thumb {
-    position: absolute;
-    width: calc(calc(var(--sz) * 2) - calc(var(--sz) / 4));
-    height: calc(calc(var(--sz) * 2) - calc(var(--sz) / 4));
-    top: calc(calc( var(--sz) / 10) + calc(var(--sz) / 50));
-    left: calc(calc(100% - calc(calc(var(--sz) * 2) - calc(var(--sz) / 3))) - calc(calc( var(--sz) / 10) + calc(var(--sz) / 10)));
-    border-radius: var(--sz);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1; 
-    animation: move-skull-left 0.5s var(--ttf) 0.5s;
-    animation-fill-mode: forwards;
-}
-
-.theme-toggle-wrapper input:checked + label .thumb {
-    left: calc(calc( var(--sz) / 10) + calc(var(--sz) / 50));
-    animation: move-skull-right 0.5s var(--ttf) 0.5s;
-    animation-fill-mode: forwards;
-}
-
-@keyframes move-skull-right {
-    0% { left: calc(calc( var(--sz) / 10) + calc(var(--sz) / 50)); }
-    100% { left: calc(calc(100% - calc(calc(var(--sz) * 2) - calc(var(--sz) / 3))) - calc(calc( var(--sz) / 10) + calc(var(--sz) / 10))); }
-}
-
-@keyframes move-skull-left {
-    0% { left: calc(calc(100% - calc(calc(var(--sz) * 2) - calc(var(--sz) / 3))) - calc(calc( var(--sz) / 10) + calc(var(--sz) / 10))); }
-    100% { left: calc(calc( var(--sz) / 10) + calc(var(--sz) / 50)); }
-}
-
-.theme-toggle-wrapper .thumb > * {
-    position: absolute;
-    animation: unselected 1.5s var(--ttf) 0s reverse;
-    animation-fill-mode: forwards;
-    filter: drop-shadow(0px 2px 2px #000);
-}
-
-.theme-toggle-wrapper input:checked + label .thumb * {
-    animation: selected 1.5s var(--ttf) 0s;
-    animation-fill-mode: forwards;  
-}
-
-@keyframes selected {
-    0%, 50% {--bone: #888;}
-    50%, 100% {--bone: #fff;}
-}
-
-@keyframes unselected {
-    0%, 50% {--bone: #888;}
-    50%, 100% {--bone: #fff;}
-}
-
-@supports (-moz-appearance:none) {
-    .theme-toggle-wrapper .thumb > * {
-        --bone: #888;
-    } 
-    .theme-toggle-wrapper input:checked + label .thumb * {
-        --bone: #fff;
-    }
-}
-
-.theme-toggle-wrapper .cranium {
-    background: linear-gradient(180deg, var(--bone) 0 54%, #fff0 0 94%, var(--bone) 0 100%), radial-gradient(circle at 75% 69%, #fff0 0 1.75vmin, var(--bone) calc(1.75vmin + 1px) 4.85vmin, #fff0 calc(4.85vmin + 1px) 100%), radial-gradient(circle at 25% 69%, #fff0 0 1.75vmin, var(--bone) calc(1.75vmin + 1px) 4.85vmin, #fff0 calc(4.85vmin + 1px) 100%);
-    width: 100%;
-    height: 14vmin;
-    left: 0;
     top: 0;
-    border-radius: 10vmin 10vmin 5.5vmin 5.5vmin;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #2b5876;
+    border-radius: 13px;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 3px;
 }
 
-.theme-toggle-wrapper .cranium:before {
-    content: "";
-    position: absolute;
-    width: 1.25vmin;
-    height: 1.25vmin;
-    bottom: -0.75vmin;
-    left: 7.5vmin;
-    background: var(--bone);
-    border-radius: 100%;
-    box-shadow: 1.25vmin 0 0 0 var(--bone);
+.skull-slider:before {
+    content: "💀";
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
 }
 
-.theme-toggle-wrapper .cranium:after {
-    content: "";
-    position: absolute;
-    width: 5.25vmin;
-    height: 1.5vmin;
-    bottom: -0.95vmin;
-    left: 6vmin;
-    background: radial-gradient(circle at 90% 10%, var(--bone) 0 1vmin, #fff0 calc(1vmin + 1px) 100%), radial-gradient(circle at 10% 10%, var(--bone) 0 1vmin, #fff0 calc(1vmin + 1px) 100%);
-    border-radius: 1vmin;
+input:checked + .skull-slider {
+    background-color: #4e4376;
 }
 
-.theme-toggle-wrapper .mouth {
-    border: 0.85vmin solid #fff0;
-    border-bottom-color: var(--bone);
-    width: 11.75vmin;
-    left: 2.85vmin;
-    height: 6vmin;
-    top: 11.25vmin;
-    background: radial-gradient(circle at 35% 98%, var(--bone) 0 0.65vmin, #fff0 calc(0.65vmin + 1px) 100%), radial-gradient(circle at 45% 100%, var(--bone) 0 0.65vmin, #fff0 calc(0.65vmin + 1px) 100%), radial-gradient(circle at 55% 100%, var(--bone) 0 0.65vmin, #fff0 calc(0.65vmin + 1px) 100%), radial-gradient(circle at 65% 98%, var(--bone) 0 0.65vmin, #fff0 calc(0.65vmin + 1px) 100%);
-    background-repeat: no-repeat;
-    border-radius: 100%;
+input:checked + .skull-slider:before {
+    transform: translateX(24px);
+    content: "☀️";
 }
 
-.theme-toggle-wrapper .mouth:before, .theme-toggle-wrapper .mouth:after {
-    content: "";
-    position: absolute;
-    border-radius: 100%;
-    background: var(--bone);
-    width: 0.7vmin;
-    height: 0.7vmin;
-    left: 0.4vmin;
-    bottom: 0.25vmin;
+/* Drawer version slightly larger */
+.drawer-switch {
+    width: 60px;
+    height: 30px;
+    margin: 10px auto;
+    display: flex;
 }
 
-.theme-toggle-wrapper .mouth:after {
-    left: 9.05vmin;
+.drawer-switch .skull-slider:before {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
 }
 
-.theme-toggle-wrapper .arm-wrapper {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 10vmin;
-    overflow: hidden;
-    right: -65%;
-    animation: check-off 1.5s var(--ttf) 0s reverse;
-    --bone: #fff;
+.drawer-switch input:checked + .skull-slider:before {
+    transform: translateX(30px);
 }
 
-.theme-toggle-wrapper input:checked + label .arm-wrapper {
-    animation: check-on 1.5s var(--ttf) 0s;
-}
-
-@keyframes check-on {
-    0% { right: -65%;}
-    25%, 33% { right: 0%; }
-    66%, 80% { right: -50%;  }
-    100% { right: -65%;  }
-}
-
-@keyframes check-off {
-    0% { right: -65%;}
-    25%, 33% { right: 0%; }
-    66%, 80% { right: -50%;  }
-    100% { right: -65%;  }
-}
-
-.theme-toggle-wrapper .arm {
-    position: absolute;
-    width: 16vmin;
-    height: 5vmin;
-    right: 25%;
-    right: 2%;
-    top: calc(50% - 2.5vmin);
-    border-radius: 0.25vmin;
-}
-
-.theme-toggle-wrapper .bone {
-    background: var(--bone);
-    width: 8vmin;
-    height: 2vmin;
-    position: absolute;
-    transform: rotate(0deg);
-    top: 1.5vmin;
-    right: -4vmin;
-}
-
-.theme-toggle-wrapper .bone:before, .theme-toggle-wrapper .bone:after,
-.theme-toggle-wrapper .big:before, .theme-toggle-wrapper .big:after {
-    content: "";
-    background: var(--bone);
-    width: 1.5vmin;
-    height: 1.5vmin;
-    position: absolute;
-    left: -0.5vmin;
-    top: -0.5vmin;
-    border-radius: 100%;
-    box-shadow: 8vmin 0 0 0 var(--bone);
-}
-
-.theme-toggle-wrapper .bone:after {
-    top: calc(100% - 1vmin);
-}
-
-.theme-toggle-wrapper .arm > .bone + .bone {
-    top: 1.5vmin;
-    left: 0.5vmin;
-    height: 0.85vmin;
-    width: 10.5vmin;
-    box-shadow: 0 1.15vmin 0 0 var(--bone);
-}
-.theme-toggle-wrapper .arm > .bone + .bone:before, .theme-toggle-wrapper .arm > .bone + .bone:after {
-    box-shadow: 10.15vmin 0 0 0 var(--bone);
-}
-
-.theme-toggle-wrapper .arm > .bone + .bone:after {
-    top: 100%;
-}
-
-.theme-toggle-wrapper .hand {
-    position: absolute;
-    --balls: var(--bone) 0.5vmin, #fff0 calc(0.5vmin + 1px) 100%;
-    background: 
-        radial-gradient(circle at 91% 29%, var(--balls)), 
-        radial-gradient(circle at 92% 49%, var(--balls)), 
-        radial-gradient(circle at 91% 69%, var(--balls)), 
-        radial-gradient(circle at 76% 21%, var(--balls)), 
-        radial-gradient(circle at 78% 39%, var(--balls)), 
-        radial-gradient(circle at 79% 58%, var(--balls)), 
-        radial-gradient(circle at 78% 78%, var(--balls));
-    width: 7vmin;
-    height: 5vmin;
-    left: -7vmin;
-    z-index: 0;
-}
-
-.theme-toggle-wrapper .hand .bone, .theme-toggle-wrapper .big {
-    width: 3vmin;
-    left: 1.35vmin;
-    height: 0.75vmin;
-    border-radius: 0.5vmin 0 0 0.5vmin;
-}
-
-.theme-toggle-wrapper .hand .bone:before, .theme-toggle-wrapper .hand .bone:after,
-.theme-toggle-wrapper .big:before, .theme-toggle-wrapper .big:after {
-    width: 0.8vmin;
-    height: 0.8vmin;
-    top: -0.25vmin;
-    left: 2.25vmin;
-    box-shadow: none;
-}
-.theme-toggle-wrapper .hand .bone:after,
-.theme-toggle-wrapper .big:after {
-    top: 0.125vmin;
-}
-
-.theme-toggle-wrapper .hand .bone:nth-child(1) {
-    transform: rotate(5deg) translateY(-1vmin) translateX(0.15vmin);
-    filter: drop-shadow(-3vmin 0vmin 0px var(--bone));
-}
-
-.theme-toggle-wrapper .hand .bone:nth-child(2) {
-    transform: rotate(0deg) translateX(0.5vmin);
-    filter: drop-shadow(-3vmin 0vmin 0px var(--bone));
-}
-
-.theme-toggle-wrapper .hand .bone:nth-child(3) {
-    transform: rotate(-2deg) translateY(1.15vmin) translateX(0.5vmin);
-    filter: drop-shadow(-3vmin 0vmin 0px var(--bone));
-}
-
-.theme-toggle-wrapper .hand .bone:nth-child(4) {
-    transform: rotate(-5deg) translateY(2.3vmin) translateX(0.5vmin);
-    filter: drop-shadow(-3vmin 0vmin 0px var(--bone));
-}
-
-.theme-toggle-wrapper .big {
-    background: var(--bone);
-    height: 1vmin !important;
-    position: absolute;
-    left: -4.25vmin !important;
-    top: 1.15vmin;
-    z-index: 1;
-    filter:drop-shadow(-2.5vmin 0vmin 0px var(--bone))  drop-shadow(0 0 1px #000);
-}
-
-/* Mobile drawer toggle sizing */
-.theme-toggle-wrapper.drawer-toggle {
-    transform: scale(0.5);
-    width: 80px;
-    height: 48px;
-    margin: 8px auto;
-}
-
-
-/* ===== Skull Toggle Container ===== */
-.skull-toggle-wrap {
-  --sz: 10vmin;
-  display: inline-block;
-  width: 32px;                 /* final visible width */
-  height: 20px;                /* final visible height */
-  position: relative;
-  overflow: hidden;
-  transform: scale(0.4);       /* shrinks the entire toggle */
-  transform-origin: left center;
-  margin-left: 10px;
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-/* Mobile drawer – slightly larger */
-.skull-toggle-wrap.drawer-toggle {
-  transform: scale(0.6);
-  width: 50px;
-  height: 30px;
-  margin: 12px auto;
-  display: block;
-}
-
-/* Ensure the internal toggle is positioned correctly */
-.skull-toggle-wrap .toggle {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+/* Hide old theme toggle */
+#themeToggle, #themeToggleDrawer {
+    display: none;
 }
