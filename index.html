@@ -1,217 +1,343 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>YourTube - YouTube Video Downloader</title>
-  <meta name="description" content="Download YouTube videos in HD quality, MP3, batch downloads, and entire channels. No watermark, fast and free." />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶️</text></svg>" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YourTube — YouTube Video Downloader (No Watermark, HD Quality)</title>
+  <meta name="description" content="Download YouTube videos in HD and audio as MP3. Single, batch and full channel downloads, fast and free." />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <div class="noise-bg"></div>
-  <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-left">
-        <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
-          <i class="fas fa-bars"></i>
-        </button>
-        <a href="#" class="logo-link" id="backToHomeBtn" style="display:none;">
-          <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
-        <a href="#" class="logo-link logo-home">
-          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff0000'%3E%3Cpath d='M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z'/%3E%3C/svg%3E" alt="logo" class="logo-img" />
-          <span class="brand-name">YourTube</span>
-        </a>
-      </div>
-      <nav class="nav" id="mainNav">
-        <a href="#" class="nav-link active" data-page="home">Home</a>
-        <a href="#" class="nav-link" data-page="qa">Q&A</a>
-        <div class="nav-dropdown" id="toolsDropdown">
-          <a href="#" class="nav-link dropdown-toggle">Tools <i class="fas fa-chevron-down"></i></a>
-          <div class="dropdown-menu">
-            <a href="#">Instagram Downloader</a>
-            <a href="#">Facebook Downloader</a>
-            <a href="#">TikTok Downloader</a>
-            <a href="#">Snapchat Downloader</a>
-            <a href="#">Twitter Downloader</a>
-            <a href="#">Vimeo Downloader</a>
-          </div>
-        </div>
-        <a href="#" class="nav-link" data-page="blog">Blog</a>
-      </nav>
-      <div class="header-right">
-        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-          <i class="fas fa-moon"></i>
-        </button>
-      </div>
-    </header>
+<body data-bg-mode="noise">
 
-    <!-- Side Drawer -->
-    <div class="side-drawer" id="sideDrawer">
-      <div class="drawer-header">
-        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff0000'%3E%3Cpath d='M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z'/%3E%3C/svg%3E" alt="logo" class="logo-img" />
+  <!-- ===================== SVG NOISE FILTER (for concrete-style background) ===================== -->
+  <svg class="bg-noise-defs" aria-hidden="true" focusable="false">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" result="noise" />
+      <feColorMatrix in="noise" type="matrix"
+        values="0 0 0 0 0
+                0 0 0 0 0
+                0 0 0 0 0
+                0 0 0 0.06 0" />
+      <feComposite operator="over" in2="SourceGraphic" />
+    </filter>
+  </svg>
+  <div class="bg-layer bg-noise"><svg width="100%" height="100%"><rect width="100%" height="100%" filter="url(#noiseFilter)"/></svg></div>
+  <div class="bg-layer bg-photo"></div>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="brand" id="brandLink" aria-label="YourTube home">
+        <img src="assets/logo.svg" alt="" class="brand-logo" />
         <span class="brand-name">YourTube</span>
-      </div>
-      <nav class="drawer-nav">
-        <a href="#" class="drawer-link" data-page="home">Home</a>
-        <a href="#" class="drawer-link" data-page="qa">Q&A</a>
-        <a href="#" class="drawer-link" data-page="blog">Blog</a>
-        <button class="drawer-link theme-toggle-drawer" id="themeToggleDrawer">
-          <i class="fas fa-moon"></i> Dark Mode
-        </button>
+      </a>
+
+      <button class="back-home-btn" id="backHomeBtn" hidden>
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Back to Home</span>
+      </button>
+
+      <nav class="main-nav" id="mainNav" aria-label="Primary">
+        <a href="#" class="nav-link" data-nav="home">Home</a>
+        <a href="#qaSection" class="nav-link" data-nav="qa">Q&amp;A</a>
+
+        <div class="nav-dropdown">
+          <button class="nav-link dropdown-toggle" id="toolsDropdownToggle" aria-expanded="false">
+            Tools <i class="fa-solid fa-chevron-down dropdown-caret"></i>
+          </button>
+          <div class="dropdown-menu" id="toolsDropdownMenu">
+            <a href="https://example.com/instagram-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Instagram Downloader</a>
+            <a href="https://example.com/facebook-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Facebook Downloader</a>
+            <a href="https://example.com/tiktok-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-tiktok"></i> TikTok Downloader</a>
+            <a href="https://example.com/snapchat-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-snapchat"></i> Snapchat Downloader</a>
+            <a href="https://example.com/twitter-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-x-twitter"></i> Twitter / X Downloader</a>
+            <a href="https://example.com/vimeo-downloader" target="_blank" rel="noopener"><i class="fa-brands fa-vimeo"></i> Vimeo Downloader</a>
+          </div>
+        </div>
+
+        <a href="#" class="nav-link" data-nav="blog">Blog</a>
       </nav>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+          <i class="fa-solid fa-sun theme-icon-sun"></i>
+          <i class="fa-solid fa-moon theme-icon-moon"></i>
+        </button>
+        <button class="icon-btn hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
     </div>
-    <div class="drawer-overlay" id="drawerOverlay"></div>
+  </header>
 
-    <!-- Main Content -->
-    <main id="mainContent">
-      <!-- Home Page -->
-      <section id="homeSection" class="home-section">
-        <!-- Hero -->
-        <div class="hero">
-          <div class="badge"><i class="fas fa-check-circle"></i> No Watermark · HD Quality</div>
-          <h1 class="hero-title">YouTube Video Downloader</h1>
-          <p class="hero-subtitle">Download videos in best quality, extract audio, batch download multiple URLs, or grab a whole channel.</p>
-          <div class="mode-selector" id="modeSelector">
-            <button class="mode-btn" data-mode="single">Single Video Download <i class="fas fa-chevron-down"></i></button>
-            <div class="mode-dropdown">
-              <div class="mode-option" data-mode="single"><i class="fas fa-video"></i> Single Video Download</div>
-              <div class="mode-option" data-mode="batch"><i class="fas fa-layer-group"></i> Batch Download (Multiple URLs)</div>
-              <div class="mode-option" data-mode="channel"><i class="fas fa-folder"></i> Channel Download</div>
-            </div>
-          </div>
+  <!-- ===================== MOBILE DRAWER ===================== -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="side-drawer" id="sideDrawer" aria-label="Mobile navigation">
+    <div class="drawer-top">
+      <a href="#" class="brand" id="drawerBrandLink">
+        <img src="assets/logo.svg" alt="" class="brand-logo" />
+        <span class="brand-name">YourTube</span>
+      </a>
+      <button class="icon-btn" id="drawerCloseBtn" aria-label="Close menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="#" class="drawer-link" data-nav="home"><i class="fa-solid fa-house"></i> Home</a>
+      <a href="#qaSection" class="drawer-link" data-nav="qa"><i class="fa-solid fa-circle-question"></i> Q&amp;A</a>
+      <a href="#" class="drawer-link" data-nav="blog"><i class="fa-solid fa-newspaper"></i> Blog</a>
+      <button class="drawer-link drawer-theme-switch" id="drawerThemeToggle">
+        <i class="fa-solid fa-circle-half-stroke"></i> <span>Switch theme</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main id="mainContent">
+
+    <!-- ---------- HERO ---------- -->
+    <section class="hero" id="heroSection">
+      <span class="badge">No Watermark &middot; HD Quality</span>
+      <h1 class="hero-title">YouTube Video Downloader</h1>
+      <p class="hero-subtitle">Save any YouTube video in HD or grab the audio as MP3 — single videos, whole playlists of links, or an entire channel.</p>
+
+      <!-- Mode switch -->
+      <div class="mode-switch">
+        <button class="mode-dropdown-toggle" id="modeDropdownToggle" aria-expanded="false">
+          <i class="fa-solid fa-video mode-icon"></i>
+          <span id="modeLabel">Single Video Download</span>
+          <i class="fa-solid fa-chevron-down dropdown-caret"></i>
+        </button>
+        <div class="mode-dropdown-menu" id="modeDropdownMenu">
+          <button class="mode-option active" data-mode="single">
+            <i class="fa-solid fa-video"></i>
+            <span>Single Video Download</span>
+          </button>
+          <button class="mode-option" data-mode="batch">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Batch Download (multiple URLs)</span>
+          </button>
+          <button class="mode-option" data-mode="channel">
+            <i class="fa-solid fa-tv"></i>
+            <span>Channel Download</span>
+          </button>
         </div>
-
-        <!-- Input Containers -->
-        <div class="input-containers">
-          <!-- Single mode -->
-          <div class="input-container active" data-mode="single" id="singleInput">
-            <label for="singleUrl">Paste YouTube video URL</label>
-            <div class="input-row">
-              <input type="text" id="singleUrl" placeholder="https://www.youtube.com/watch?v=..." />
-              <button class="btn-primary" id="singleDownloadBtn"><i class="fas fa-download"></i> Paste & Download</button>
-            </div>
-            <div class="error-box" id="singleError" style="display:none;"></div>
-          </div>
-
-          <!-- Batch mode -->
-          <div class="input-container" data-mode="batch" id="batchInput">
-            <label for="batchUrls">Paste multiple YouTube URLs (one per line)</label>
-            <textarea id="batchUrls" rows="5" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
-            <button class="btn-primary" id="batchFetchBtn"><i class="fas fa-search"></i> Fetch Videos</button>
-            <div class="batch-progress" id="batchProgress" style="display:none;"></div>
-            <div class="batch-list" id="batchList"></div>
-            <div class="batch-actions" id="batchActions" style="display:none;">
-              <button class="btn-primary" id="batchDownloadSelectedBtn"><i class="fas fa-download"></i> Download Selected</button>
-              <span class="batch-summary" id="batchSummary"></span>
-            </div>
-          </div>
-
-          <!-- Channel mode -->
-          <div class="input-container" data-mode="channel" id="channelInput">
-            <label for="channelUrl">Paste YouTube channel URL</label>
-            <input type="text" id="channelUrl" placeholder="https://www.youtube.com/@channelname" />
-            <button class="btn-primary" id="channelFetchBtn"><i class="fas fa-search"></i> Fetch Videos</button>
-            <div class="batch-progress" id="channelProgress" style="display:none;"></div>
-            <div class="batch-list" id="channelList"></div>
-            <div class="batch-actions" id="channelActions" style="display:none;">
-              <button class="btn-primary" id="channelDownloadSelectedBtn"><i class="fas fa-download"></i> Download Selected</button>
-              <span class="batch-summary" id="channelSummary"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Result Card (Single) -->
-        <div class="result-card" id="resultCard" style="display:none;">
-          <div class="result-video" id="resultPlayer"></div>
-          <div class="result-info">
-            <h3 class="result-title" id="resultTitle" title="Click to copy full title">Video Title</h3>
-            <p class="result-channel" id="resultChannel">Channel Name</p>
-            <div class="result-actions">
-              <button class="btn-download" id="downloadHdBtn"><i class="fas fa-video"></i> Download HD</button>
-              <button class="btn-download" id="downloadMp3Btn"><i class="fas fa-music"></i> Download MP3</button>
-            </div>
-          </div>
-          <button class="btn-new-link" id="newLinkBtn"><i class="fas fa-plus"></i> New Link</button>
-        </div>
-
-        <!-- Steps Section -->
-        <section class="steps-section" id="stepsSection">
-          <div class="step-card" data-animate>
-            <div class="step-number">1</div>
-            <h3>Paste Video URL</h3>
-            <p>Copy the YouTube video link and paste it into the input field. We support all YouTube URL formats.</p>
-          </div>
-          <div class="step-card" data-animate>
-            <div class="step-number">2</div>
-            <h3>Choose Quality</h3>
-            <p>Select HD video or extract audio as MP3. Preview the video before you download.</p>
-          </div>
-          <div class="step-card" data-animate>
-            <div class="step-number">3</div>
-            <h3>Download</h3>
-            <p>Click download and watch the real‑time progress. Your file will be saved directly to your device.</p>
-          </div>
-        </section>
-
-        <!-- Q&A Accordion -->
-        <section class="qa-section" id="qaSection">
-          <h2>Frequently Asked Questions</h2>
-          <div class="qa-item">
-            <button class="qa-question">Is it free to download YouTube videos? <i class="fas fa-chevron-down"></i></button>
-            <div class="qa-answer"><p>Yes, our tool is completely free. We don't charge anything and there are no hidden fees.</p></div>
-          </div>
-          <div class="qa-item">
-            <button class="qa-question">Can I download an entire YouTube channel? <i class="fas fa-chevron-down"></i></button>
-            <div class="qa-answer"><p>Yes, switch to Channel Download mode, paste the channel URL, and we'll fetch up to 50 videos for you to download.</p></div>
-          </div>
-          <div class="qa-item">
-            <button class="qa-question">What quality can I download? <i class="fas fa-chevron-down"></i></button>
-            <div class="qa-answer"><p>We provide the best available HD quality (up to 1080p) and an audio‑only MP3 option.</p></div>
-          </div>
-        </section>
-
-        <!-- Download History -->
-        <section class="history-section" id="historySection" style="display:none;">
-          <h2>Download History</h2>
-          <div class="history-list" id="historyList"></div>
-        </section>
-      </section>
-
-      <!-- Blog Page (hidden initially) -->
-      <section id="blogSection" class="blog-section" style="display:none;">
-        <div class="blog-content" id="blogContent">
-          <div class="loading">Loading blog...</div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="footer-links">
-        <a href="#" class="modal-link" data-modal="disclaimer">Disclaimer</a>
-        <a href="#" class="modal-link" data-modal="privacy">Privacy</a>
-        <a href="#" class="modal-link" data-modal="terms">Terms</a>
-        <a href="#" class="modal-link" data-modal="about">About</a>
-        <a href="#" data-page="blog">Blog</a>
       </div>
-      <p class="footer-copy">© 2025 YourTube · Powered by RapidAPI</p>
-    </footer>
+    </section>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Modal Container -->
-    <div class="modal-overlay" id="modalOverlay" style="display:none;">
-      <div class="modal">
-        <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
-        <div class="modal-content" id="modalContent"></div>
+    <!-- ---------- SINGLE VIDEO MODE ---------- -->
+    <section class="input-card" id="singleContainer">
+      <label class="input-label" for="singleUrlInput">Paste YouTube video URL</label>
+      <div class="input-row">
+        <input type="text" id="singleUrlInput" class="text-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+        <button class="btn btn-primary" id="singlePasteBtn">
+          <i class="fa-solid fa-paste"></i>
+          <span>Paste &amp; Download</span>
+        </button>
       </div>
+      <div class="error-box" id="singleError" hidden></div>
+    </section>
+
+    <!-- ---------- BATCH MODE ---------- -->
+    <section class="input-card" id="batchContainer" hidden>
+      <label class="input-label" for="batchUrlsInput">Paste multiple YouTube URLs (one per line)</label>
+      <textarea id="batchUrlsInput" class="text-area" rows="5" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/...&#10;https://www.youtube.com/watch?v=..."></textarea>
+      <div class="input-actions">
+        <button class="btn btn-primary" id="batchFetchBtn">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>Fetch Videos</span>
+        </button>
+      </div>
+      <div class="error-box" id="batchError" hidden></div>
+      <div class="progress-status" id="batchProgressText" hidden></div>
+      <div class="video-list" id="batchVideoList"></div>
+      <div class="list-actions" id="batchListActions" hidden>
+        <button class="btn btn-secondary" id="batchDownloadBtn">
+          <i class="fa-solid fa-download"></i>
+          <span>Download Selected</span>
+        </button>
+        <span class="list-progress" id="batchDownloadProgress"></span>
+      </div>
+    </section>
+
+    <!-- ---------- CHANNEL MODE ---------- -->
+    <section class="input-card" id="channelContainer" hidden>
+      <label class="input-label" for="channelUrlInput">Paste a YouTube channel URL</label>
+      <div class="input-row">
+        <input type="text" id="channelUrlInput" class="text-input" placeholder="https://www.youtube.com/@channelname" autocomplete="off" spellcheck="false" />
+        <button class="btn btn-primary" id="channelFetchBtn">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>Fetch Videos</span>
+        </button>
+      </div>
+      <div class="error-box" id="channelError" hidden></div>
+      <div class="progress-status" id="channelProgressText" hidden></div>
+      <div class="video-list" id="channelVideoList"></div>
+      <div class="list-actions" id="channelListActions" hidden>
+        <button class="btn btn-secondary" id="channelDownloadBtn">
+          <i class="fa-solid fa-download"></i>
+          <span>Download Selected</span>
+        </button>
+        <span class="list-progress" id="channelDownloadProgress"></span>
+      </div>
+    </section>
+
+    <!-- ---------- SINGLE RESULT CARD ---------- -->
+    <section class="result-card" id="resultCard" hidden>
+      <div class="result-preview" id="resultPreview">
+        <!-- player or thumbnail injected here -->
+      </div>
+      <div class="result-body">
+        <h3 class="result-title" id="resultTitle" title="Click to copy title"></h3>
+        <p class="result-channel" id="resultChannel"></p>
+        <div class="result-actions">
+          <button class="btn btn-primary download-btn" id="downloadVideoBtn" data-original-text="HD Video">
+            <i class="fa-solid fa-film"></i>
+            <span class="btn-text">HD Video</span>
+          </button>
+          <button class="btn btn-outline download-btn" id="downloadAudioBtn" data-original-text="Audio MP3" hidden>
+            <i class="fa-solid fa-music"></i>
+            <span class="btn-text">Audio MP3</span>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-ghost new-link-btn" id="newLinkBtn">
+        <i class="fa-solid fa-rotate-left"></i> New Link
+      </button>
+    </section>
+
+    <!-- ---------- HISTORY PANEL ---------- -->
+    <section class="history-panel" id="historyPanel" hidden>
+      <div class="section-heading">
+        <h2>Download History</h2>
+        <span class="section-hint">Items are removed automatically after 24 hours</span>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+
+    <!-- ---------- STEPS ---------- -->
+    <section class="steps-section" id="stepsSection">
+      <div class="section-heading center">
+        <h2>How it works</h2>
+        <p>Three simple steps to save any YouTube video</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card reveal">
+          <div class="step-icon"><i class="fa-solid fa-link"></i></div>
+          <h3>1. Copy the link</h3>
+          <p>Open YouTube, find the video, playlist links or channel you want, and copy its URL.</p>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-icon"><i class="fa-solid fa-paste"></i></div>
+          <h3>2. Paste &amp; fetch</h3>
+          <p>Paste the link here (or let auto-paste detect it) and YourTube will fetch the available formats instantly.</p>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-icon"><i class="fa-solid fa-download"></i></div>
+          <h3>3. Download</h3>
+          <p>Choose HD video or MP3 audio and watch the real-time progress until your file is saved.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Q&A ---------- -->
+    <section class="qa-section" id="qaSection">
+      <div class="section-heading center">
+        <h2>Frequently Asked Questions</h2>
+      </div>
+      <div class="qa-accordion" id="qaAccordion">
+        <div class="qa-item">
+          <button class="qa-question" aria-expanded="false">
+            <span>Is YourTube free to use?</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="qa-answer">
+            <p>Yes. YourTube is completely free with no sign-up required. Simply paste a link and download.</p>
+          </div>
+        </div>
+        <div class="qa-item">
+          <button class="qa-question" aria-expanded="false">
+            <span>What video quality can I download?</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="qa-answer">
+            <p>YourTube fetches the highest quality stream available for a video, up to HD, along with a separate MP3 audio-only option when offered.</p>
+          </div>
+        </div>
+        <div class="qa-item">
+          <button class="qa-question" aria-expanded="false">
+            <span>Can I download a whole channel at once?</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="qa-answer">
+            <p>Yes. Switch to Channel Download mode, paste the channel URL, and YourTube will list its recent uploads so you can select which ones to save.</p>
+          </div>
+        </div>
+        <div class="qa-item">
+          <button class="qa-question" aria-expanded="false">
+            <span>Is it legal to download YouTube videos?</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="qa-answer">
+            <p>Downloading content you own, that is in the public domain, or that the creator allows for offline use is generally fine. Always check the video's license and YouTube's terms before downloading copyrighted material.</p>
+          </div>
+        </div>
+        <div class="qa-item">
+          <button class="qa-question" aria-expanded="false">
+            <span>Do I need to install any software?</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="qa-answer">
+            <p>No installation needed. YourTube runs entirely in your browser on desktop, tablet, or mobile.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- BLOG PAGE ---------- -->
+    <section class="blog-page" id="blogPage" hidden>
+      <div class="blog-content" id="blogContent">
+        <p class="loading-text">Loading articles…</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== TOASTS ===================== -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- ===================== MODAL (legal pages) ===================== -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalClose" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="modal-body" id="modalBody"></div>
     </div>
   </div>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="brand">
+          <img src="assets/logo.svg" alt="" class="brand-logo" />
+          <span class="brand-name">YourTube</span>
+        </a>
+        <p>© 2025 YourTube. All rights reserved.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#" data-modal="disclaimer">Disclaimer</a>
+        <a href="#" data-modal="privacy">Privacy</a>
+        <a href="#" data-modal="terms">Terms</a>
+        <a href="#" data-modal="about">About</a>
+        <a href="#" data-nav="blog">Blog</a>
+      </nav>
+      <p class="footer-powered">Powered by RapidAPI</p>
+    </div>
+  </footer>
 
   <script src="js/app.js"></script>
 </body>
