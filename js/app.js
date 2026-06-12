@@ -1,780 +1,1145 @@
-// ========== Configuration ==========
-const AD_URL = 'https://www.example.com/ad'; // Replace with your ad URL
-const RAPIDAPI_KEY_FALLBACK = ''; // Set your key for development (not used in production)
-const MAX_CONCURRENT_DOWNLOADS = 3;
+/* =====================================================================
+   YourTube — app.js
+   All client-side functionality: theming, navigation, the three
+   download modes, real-time download progress, history, blog/legal
+   pages, toasts, ad integration, and small UI interactions.
+   ===================================================================== */
 
-// ========== DOM Elements ==========
-const html = document.documentElement;
-const themeToggle = document.getElementById('themeToggle');
-const themeToggleDrawer = document.getElementById('themeToggleDrawer');
-const hamburgerBtn = document.getElementById('hamburgerBtn');
-const sideDrawer = document.getElementById('sideDrawer');
-const drawerOverlay = document.getElementById('drawerOverlay');
-const backToHomeBtn = document.getElementById('backToHomeBtn');
-const mainContent = document.getElementById('mainContent');
-const homeSection = document.getElementById('homeSection');
-const blogSection = document.getElementById('blogSection');
-const blogContent = document.getElementById('blogContent');
-const modeSelector = document.getElementById('modeSelector');
-const modeBtn = modeSelector.querySelector('.mode-btn');
-const modeDropdown = modeSelector.querySelector('.mode-dropdown');
-const modeOptions = document.querySelectorAll('.mode-option');
+(() => {
+  'use strict';
 
-// Input containers
-const singleInput = document.getElementById('singleInput');
-const batchInput = document.getElementById('batchInput');
-const channelInput = document.getElementById('channelInput');
+  /* ===================================================================
+     0. CONFIG — replace these for your own deployment
+     =================================================================== */
+  const AD_URL = 'https://example.com/ad-landing-page'; // <-- replace with your ad/monetization URL
+  const API_VIDEO_INFO = '/api/youtube-download';        // single video info + download links
+  const API_CHANNEL = '/api/youtube-channel';            // channel uploads list
+  const BATCH_FETCH_DELAY = 1200;                        // ms between batch/channel detail fetches
+  const CONCURRENT_DOWNLOADS = 3;                        // simultaneous downloads in batch/channel mode
+  const HISTORY_TTL = 24 * 60 * 60 * 1000;               // 24 hours
+  const HISTORY_KEY = 'yt_download_history';
+  const THEME_KEY = 'yt_theme';
 
-// Single elements
-const singleUrl = document.getElementById('singleUrl');
-const singleDownloadBtn = document.getElementById('singleDownloadBtn');
-const singleError = document.getElementById('singleError');
-const resultCard = document.getElementById('resultCard');
-const resultPlayer = document.getElementById('resultPlayer');
-const resultTitle = document.getElementById('resultTitle');
-const resultChannel = document.getElementById('resultChannel');
-const downloadHdBtn = document.getElementById('downloadHdBtn');
-const downloadMp3Btn = document.getElementById('downloadMp3Btn');
-const newLinkBtn = document.getElementById('newLinkBtn');
+  /* ===================================================================
+     1. DOM HELPERS
+     =================================================================== */
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
-// Batch elements
-const batchUrls = document.getElementById('batchUrls');
-const batchFetchBtn = document.getElementById('batchFetchBtn');
-const batchProgress = document.getElementById('batchProgress');
-const batchList = document.getElementById('batchList');
-const batchActions = document.getElementById('batchActions');
-const batchDownloadSelectedBtn = document.getElementById('batchDownloadSelectedBtn');
-const batchSummary = document.getElementById('batchSummary');
+  /* ===================================================================
+     2. TOASTS
+     =================================================================== */
+  const toastContainer = $('#toastContainer');
 
-// Channel elements
-const channelUrl = document.getElementById('channelUrl');
-const channelFetchBtn = document.getElementById('channelFetchBtn');
-const channelProgress = document.getElementById('channelProgress');
-const channelList = document.getElementById('channelList');
-const channelActions = document.getElementById('channelActions');
-const channelDownloadSelectedBtn = document.getElementById('channelDownloadSelectedBtn');
-const channelSummary = document.getElementById('channelSummary');
+  function showToast(message, type = 'info', duration = 3500) {
+    const icons = {
+      success: 'fa-circle-check',
+      error: 'fa-circle-exclamation',
+      info: 'fa-circle-info',
+    };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${message}</span>`;
+    toastContainer.appendChild(toast);
 
-// History
-const historySection = document.getElementById('historySection');
-const historyList = document.getElementById('historyList');
-
-// Steps animation
-const stepCards = document.querySelectorAll('.step-card');
-const qaItems = document.querySelectorAll('.qa-item');
-
-// Toast & Modal
-const toastContainer = document.getElementById('toastContainer');
-const modalOverlay = document.getElementById('modalOverlay');
-const modalContent = document.getElementById('modalContent');
-const modalClose = document.getElementById('modalClose');
-
-// ========== State ==========
-let currentMode = 'single';
-let currentVideoData = null; // single result
-let batchVideos = [];
-let channelVideos = [];
-let downloadHistory = JSON.parse(localStorage.getItem('ytDownloadHistory') || '[]');
-let adOpenedSession = false;
-let activeDownloads = {};
-
-// ========== Themes ==========
-function setTheme(theme) {
-  html.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-  const icon = theme === 'dark' ? 'fa-sun' : 'fa-moon';
-  themeToggle.innerHTML = `<i class="fas ${icon}"></i>`;
-  if (themeToggleDrawer) {
-    themeToggleDrawer.innerHTML = `<i class="fas ${icon}"></i> ${theme === 'dark' ? 'Light' : 'Dark'} Mode`;
+    setTimeout(() => {
+      toast.classList.add('hide');
+      toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }, duration);
   }
-}
 
-function toggleTheme() {
-  const current = html.getAttribute('data-theme');
-  setTheme(current === 'dark' ? 'light' : 'dark');
-}
+  /* ===================================================================
+     3. THEME TOGGLE
+     =================================================================== */
+  const root = document.documentElement;
 
-const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-setTheme(savedTheme);
-themeToggle.addEventListener('click', toggleTheme);
-themeToggleDrawer?.addEventListener('click', toggleTheme);
+  function setTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
+  }
 
-// ========== Side Drawer ==========
-function openDrawer() {
-  sideDrawer.classList.add('open');
-  drawerOverlay.classList.add('open');
-}
+  function toggleTheme() {
+    const current = root.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  }
 
-function closeDrawer() {
-  sideDrawer.classList.remove('open');
-  drawerOverlay.classList.remove('open');
-}
-
-hamburgerBtn.addEventListener('click', openDrawer);
-drawerOverlay.addEventListener('click', closeDrawer);
-
-// Drawer navigation links
-document.querySelectorAll('.drawer-link[data-page]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    const page = link.dataset.page;
-    navigateTo(page);
-    closeDrawer();
-  });
-});
-
-// ========== Mode Dropdown ==========
-modeBtn.addEventListener('click', () => modeDropdown.classList.toggle('open'));
-document.addEventListener('click', (e) => {
-  if (!modeSelector.contains(e.target)) modeDropdown.classList.remove('open');
-});
-
-modeOptions.forEach(opt => {
-  opt.addEventListener('click', () => {
-    currentMode = opt.dataset.mode;
-    modeBtn.innerHTML = `${opt.innerHTML} <i class="fas fa-chevron-down"></i>`;
-    modeDropdown.classList.remove('open');
-    updateInputVisibility();
-  });
-});
-
-function updateInputVisibility() {
-  [singleInput, batchInput, channelInput].forEach(el => el.classList.remove('active'));
-  if (currentMode === 'single') singleInput.classList.add('active');
-  else if (currentMode === 'batch') batchInput.classList.add('active');
-  else if (currentMode === 'channel') channelInput.classList.add('active');
-}
-
-// ========== Navigation ==========
-function navigateTo(page) {
-  if (page === 'blog') {
-    homeSection.style.display = 'none';
-    blogSection.style.display = 'block';
-    backToHomeBtn.style.display = 'flex';
-    loadBlog();
-  } else {
-    homeSection.style.display = 'block';
-    blogSection.style.display = 'none';
-    backToHomeBtn.style.display = 'none';
-    if (page === 'qa') {
-      document.getElementById('qaSection').scrollIntoView({ behavior: 'smooth' });
+  (function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved) {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setTheme('light');
     }
-  }
-}
+  })();
 
-document.querySelectorAll('.nav-link[data-page], .footer-links a[data-page]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigateTo(link.dataset.page);
+  $('#themeToggle').addEventListener('click', toggleTheme);
+  $('#drawerThemeToggle').addEventListener('click', toggleTheme);
+
+  /* ===================================================================
+     4. MOBILE DRAWER
+     =================================================================== */
+  const drawer = $('#sideDrawer');
+  const drawerOverlay = $('#drawerOverlay');
+
+  function openDrawer() {
+    drawer.classList.add('active');
+    drawerOverlay.classList.add('active');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('active');
+    drawerOverlay.classList.remove('active');
+  }
+
+  $('#hamburgerBtn').addEventListener('click', openDrawer);
+  $('#drawerCloseBtn').addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+
+  /* ===================================================================
+     5. TOOLS NAV DROPDOWN
+     =================================================================== */
+  const toolsDropdownToggle = $('#toolsDropdownToggle');
+  const toolsDropdownWrapper = toolsDropdownToggle.closest('.nav-dropdown');
+
+  toolsDropdownToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toolsDropdownWrapper.classList.toggle('open');
+    toolsDropdownToggle.setAttribute('aria-expanded', toolsDropdownWrapper.classList.contains('open'));
   });
-});
 
-backToHomeBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  navigateTo('home');
-});
-
-// ========== Blog Loading ==========
-async function loadBlog() {
-  if (blogContent.innerHTML !== '<div class="loading">Loading blog...</div>') return;
-  try {
-    const res = await fetch('/content/blog.html');
-    if (res.ok) {
-      blogContent.innerHTML = await res.text();
-    } else {
-      blogContent.innerHTML = '<p>Blog content not found.</p>';
+  document.addEventListener('click', (e) => {
+    if (!toolsDropdownWrapper.contains(e.target)) {
+      toolsDropdownWrapper.classList.remove('open');
+      toolsDropdownToggle.setAttribute('aria-expanded', 'false');
     }
-  } catch {
-    blogContent.innerHTML = '<p>Failed to load blog.</p>';
+  });
+
+  /* ===================================================================
+     6. PAGE NAVIGATION (Home / Q&A / Blog)
+     =================================================================== */
+  const heroSection = $('#heroSection');
+  const stepsSection = $('#stepsSection');
+  const qaSection = $('#qaSection');
+  const blogPage = $('#blogPage');
+  const backHomeBtn = $('#backHomeBtn');
+  const historyPanel = $('#historyPanel');
+
+  // All the "home" sections that should be visible together
+  const homeSections = () => $$('#heroSection, #singleContainer, #batchContainer, #channelContainer, #resultCard, #historyPanel, #stepsSection, #qaSection');
+
+  function showHome() {
+    homeSections().forEach((el) => {
+      // respect existing hidden states for input containers/result card —
+      // only force-show hero, steps, qa and history (history governed separately)
+      if (['heroSection', 'stepsSection', 'qaSection'].includes(el.id)) {
+        el.hidden = false;
+      }
+    });
+    // restore correct mode container visibility
+    applyModeVisibility();
+    refreshHistoryVisibility();
+    blogPage.hidden = true;
+    backHomeBtn.hidden = true;
+    setActiveNav('home');
   }
-}
 
-// ========== Modal (Legal Pages) ==========
-function openModal(content) {
-  modalContent.innerHTML = content;
-  modalOverlay.style.display = 'flex';
-}
+  function showBlog() {
+    heroSection.hidden = true;
+    $('#singleContainer').hidden = true;
+    $('#batchContainer').hidden = true;
+    $('#channelContainer').hidden = true;
+    $('#resultCard').hidden = true;
+    historyPanel.hidden = true;
+    stepsSection.hidden = true;
+    qaSection.hidden = true;
+    blogPage.hidden = false;
+    backHomeBtn.hidden = false;
+    setActiveNav('blog');
+    loadBlogContent();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-function closeModal() {
-  modalOverlay.style.display = 'none';
-}
+  function setActiveNav(name) {
+    $$('.nav-link[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === name));
+  }
 
-modalClose.addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', (e) => {
-  if (e.target === modalOverlay) closeModal();
-});
+  $$('[data-nav]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      const target = el.dataset.nav;
+      if (target === 'blog') {
+        e.preventDefault();
+        showBlog();
+        closeDrawer();
+      } else if (target === 'home') {
+        e.preventDefault();
+        showHome();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        closeDrawer();
+      } else if (target === 'qa') {
+        // allow normal anchor scroll, but ensure we are on the home view
+        if (!blogPage.hidden) {
+          e.preventDefault();
+          showHome();
+          setTimeout(() => qaSection.scrollIntoView({ behavior: 'smooth' }), 50);
+        }
+        closeDrawer();
+      }
+    });
+  });
 
-document.querySelectorAll('.modal-link').forEach(link => {
-  link.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const page = link.dataset.modal;
+  $('#brandLink').addEventListener('click', (e) => { e.preventDefault(); showHome(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('#drawerBrandLink').addEventListener('click', (e) => { e.preventDefault(); showHome(); closeDrawer(); });
+  backHomeBtn.addEventListener('click', showHome);
+
+  /* ===================================================================
+     7. MODE SWITCH (Single / Batch / Channel)
+     =================================================================== */
+  const modeSwitch = $('.mode-switch');
+  const modeDropdownToggle = $('#modeDropdownToggle');
+  const modeDropdownMenu = $('#modeDropdownMenu');
+  const modeLabel = $('#modeLabel');
+  const modeIcon = $('.mode-icon');
+
+  const modeMeta = {
+    single: { label: 'Single Video Download', icon: 'fa-video' },
+    batch: { label: 'Batch Download (multiple URLs)', icon: 'fa-layer-group' },
+    channel: { label: 'Channel Download', icon: 'fa-tv' },
+  };
+
+  let currentMode = 'single';
+
+  function applyModeVisibility() {
+    $('#singleContainer').hidden = currentMode !== 'single';
+    $('#batchContainer').hidden = currentMode !== 'batch';
+    $('#channelContainer').hidden = currentMode !== 'channel';
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    modeLabel.textContent = modeMeta[mode].label;
+    modeIcon.className = `fa-solid ${modeMeta[mode].icon} mode-icon`;
+    $$('.mode-option').forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === mode));
+    applyModeVisibility();
+    modeSwitch.classList.remove('open');
+  }
+
+  modeDropdownToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modeSwitch.classList.toggle('open');
+    modeDropdownToggle.setAttribute('aria-expanded', modeSwitch.classList.contains('open'));
+  });
+
+  $$('.mode-option').forEach((btn) => {
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!modeSwitch.contains(e.target)) {
+      modeSwitch.classList.remove('open');
+    }
+  });
+
+  /* ===================================================================
+     8. URL VALIDATION HELPERS
+     =================================================================== */
+  const YT_VIDEO_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/i;
+  const YT_CHANNEL_REGEX = /youtube\.com\/(?:@[\w.-]+|channel\/[\w-]+|c\/[\w-]+|user\/[\w-]+)/i;
+
+  function isValidYouTubeUrl(url) {
+    return YT_VIDEO_REGEX.test((url || '').trim());
+  }
+
+  function isValidChannelUrl(url) {
+    return YT_CHANNEL_REGEX.test((url || '').trim());
+  }
+
+  function extractVideoId(url) {
+    const match = (url || '').match(YT_VIDEO_REGEX);
+    return match ? match[1] : null;
+  }
+
+  /* ===================================================================
+     9. AD INTEGRATION
+     =================================================================== */
+  function openAd() {
     try {
-      const res = await fetch(`/content/${page}.html`);
-      if (res.ok) {
-        const text = await res.text();
-        openModal(text);
+      window.open(AD_URL, '_blank');
+    } catch (err) {
+      /* popup blockers may prevent this — fail silently */
+    }
+  }
+
+  /* ===================================================================
+     10. API CALLS
+     =================================================================== */
+  async function fetchVideoInfo(url) {
+    const res = await fetch(API_VIDEO_INFO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `Request failed (${res.status})`);
+    }
+    return res.json();
+  }
+
+  async function fetchChannelVideos(channelUrl) {
+    const res = await fetch(API_CHANNEL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: channelUrl }),
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `Request failed (${res.status})`);
+    }
+    return res.json();
+  }
+
+  /* ===================================================================
+     11. DOWNLOAD HISTORY (localStorage, 24h TTL)
+     =================================================================== */
+  const historyList = $('#historyList');
+
+  function loadHistory() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      const now = Date.now();
+      return raw.filter((item) => now - item.createdAt < HISTORY_TTL);
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHistory(items) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+  }
+
+  function refreshHistoryVisibility() {
+    const items = loadHistory();
+    historyPanel.hidden = items.length === 0;
+  }
+
+  function renderHistory() {
+    const items = loadHistory();
+    historyPanel.hidden = items.length === 0;
+    historyList.innerHTML = '';
+
+    items
+      .slice()
+      .reverse()
+      .forEach((item) => {
+        const el = document.createElement('div');
+        el.className = 'history-item';
+        el.dataset.id = item.id;
+
+        const progressHtml = item.completed
+          ? `<span class="history-badge"><i class="fa-solid fa-circle-check"></i> Completed</span>`
+          : `<div style="flex:1;min-width:120px;">
+               <div class="history-progress-bar"><div class="history-progress-fill" style="width:${item.progress || 0}%"></div></div>
+               <div class="history-progress-meta">
+                 <span>${(item.loadedMb || 0).toFixed(1)} / ${(item.totalMb || 0).toFixed(1)} MB</span>
+                 <span>${item.speed || '0 KB/s'}</span>
+               </div>
+             </div>`;
+
+        el.innerHTML = `
+          <img class="history-item-thumb" src="${item.thumbnail || ''}" alt="" onerror="this.style.visibility='hidden'">
+          <div class="history-item-info">
+            <div class="history-item-title">${escapeHtml(item.title || 'Untitled video')}</div>
+            <div class="history-item-channel">${escapeHtml(item.channel || '')} &middot; ${item.type === 'audio' ? 'MP3' : 'Video'}</div>
+          </div>
+          ${item.completed ? progressHtml : ''}
+          ${!item.completed ? progressHtml : ''}
+          <button class="history-delete-btn" aria-label="Remove from history"><i class="fa-solid fa-trash"></i></button>
+        `;
+
+        el.querySelector('.history-delete-btn').addEventListener('click', () => {
+          const updated = loadHistory().filter((h) => h.id !== item.id);
+          saveHistory(updated);
+          renderHistory();
+        });
+
+        historyList.appendChild(el);
+      });
+  }
+
+  function addHistoryItem(data) {
+    const items = loadHistory();
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: data.title,
+      channel: data.channel,
+      thumbnail: data.thumbnail,
+      type: data.type || 'video',
+      createdAt: Date.now(),
+      completed: false,
+      progress: 0,
+      loadedMb: 0,
+      totalMb: 0,
+      speed: '0 KB/s',
+    };
+    items.push(entry);
+    saveHistory(items);
+    renderHistory();
+    return entry.id;
+  }
+
+  function updateHistoryItem(id, patch) {
+    const items = loadHistory();
+    const idx = items.findIndex((h) => h.id === id);
+    if (idx === -1) return;
+    items[idx] = { ...items[idx], ...patch };
+    saveHistory(items);
+    renderHistory();
+  }
+
+  // Periodically prune expired items
+  setInterval(() => {
+    const before = loadHistory();
+    const after = before.filter((item) => Date.now() - item.createdAt < HISTORY_TTL);
+    if (after.length !== before.length) {
+      saveHistory(after);
+      renderHistory();
+    }
+  }, 60 * 1000);
+
+  function escapeHtml(str = '') {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ===================================================================
+     12. DOWNLOAD WITH REAL-TIME PROGRESS
+     =================================================================== */
+
+  /**
+   * Streams a file from `url`, updates `buttonEl`'s text every 0.5s with
+   * size/speed info, and saves the resulting blob via an <a download>.
+   * Also keeps an associated history item in sync.
+   */
+  async function downloadWithProgress(url, filename, buttonEl, historyId) {
+    const originalHtml = buttonEl.innerHTML;
+    const textSpan = buttonEl.querySelector('.btn-text') || buttonEl;
+    buttonEl.disabled = true;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok || !response.body) {
+        throw new Error('Download failed');
+      }
+
+      const contentLength = response.headers.get('Content-Length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      const reader = response.body.getReader();
+
+      let receivedBytes = 0;
+      let lastTimestamp = performance.now();
+      let lastBytes = 0;
+      const chunks = [];
+
+      let updateTimer = setInterval(() => {
+        const now = performance.now();
+        const elapsedSec = (now - lastTimestamp) / 1000 || 1;
+        const bytesSinceLast = receivedBytes - lastBytes;
+        const speedBytesPerSec = bytesSinceLast / elapsedSec;
+        const speedLabel = formatSpeed(speedBytesPerSec);
+
+        const totalMb = totalBytes / (1024 * 1024);
+        const loadedMb = receivedBytes / (1024 * 1024);
+
+        if (totalBytes) {
+          textSpan.textContent = `${loadedMb.toFixed(1)} / ${totalMb.toFixed(1)} MB · ${speedLabel}`;
+        } else {
+          textSpan.textContent = `${loadedMb.toFixed(1)} MB · ${speedLabel}`;
+        }
+
+        if (historyId) {
+          updateHistoryItem(historyId, {
+            loadedMb,
+            totalMb,
+            speed: speedLabel,
+            progress: totalBytes ? Math.min(100, (receivedBytes / totalBytes) * 100) : 0,
+          });
+        }
+
+        lastTimestamp = now;
+        lastBytes = receivedBytes;
+      }, 500);
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        receivedBytes += value.length;
+      }
+
+      clearInterval(updateTimer);
+
+      const blob = new Blob(chunks);
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+
+      if (historyId) {
+        updateHistoryItem(historyId, {
+          completed: true,
+          progress: 100,
+          loadedMb: receivedBytes / (1024 * 1024),
+          totalMb: totalBytes ? totalBytes / (1024 * 1024) : receivedBytes / (1024 * 1024),
+        });
+      }
+
+      showToast('Download complete!', 'success');
+    } catch (err) {
+      showToast(`Download failed: ${err.message}`, 'error');
+      if (historyId) {
+        updateHistoryItem(historyId, { completed: true, progress: 0, speed: 'Failed' });
+      }
+    } finally {
+      buttonEl.disabled = false;
+      buttonEl.innerHTML = originalHtml;
+    }
+  }
+
+  function formatSpeed(bytesPerSec) {
+    if (!isFinite(bytesPerSec) || bytesPerSec <= 0) return '0 KB/s';
+    if (bytesPerSec >= 1024 * 1024) return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`;
+    return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+  }
+
+  function safeFilename(title, ext) {
+    const cleaned = (title || 'video').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 80);
+    return `${cleaned || 'video'}.${ext}`;
+  }
+
+  /* ===================================================================
+     13. SINGLE VIDEO MODE
+     =================================================================== */
+  const singleUrlInput = $('#singleUrlInput');
+  const singlePasteBtn = $('#singlePasteBtn');
+  const singleError = $('#singleError');
+  const resultCard = $('#resultCard');
+  const resultPreview = $('#resultPreview');
+  const resultTitle = $('#resultTitle');
+  const resultChannel = $('#resultChannel');
+  const downloadVideoBtn = $('#downloadVideoBtn');
+  const downloadAudioBtn = $('#downloadAudioBtn');
+  const newLinkBtn = $('#newLinkBtn');
+
+  let currentVideoData = null;
+
+  function showSingleError(message) {
+    singleError.textContent = message;
+    singleError.hidden = false;
+  }
+  function clearSingleError() {
+    singleError.hidden = true;
+    singleError.textContent = '';
+  }
+
+  function showResultCard(data) {
+    currentVideoData = data;
+    heroSection.hidden = true;
+    $('#singleContainer').hidden = true;
+    resultCard.hidden = false;
+
+    const videoId = extractVideoId(data.url || singleUrlInput.value);
+
+    if (videoId) {
+      resultPreview.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" title="${escapeHtml(data.title || '')}" allowfullscreen loading="lazy"></iframe>`;
+    } else {
+      resultPreview.innerHTML = `
+        <img src="${data.thumbnail || ''}" alt="${escapeHtml(data.title || '')}" />
+        <div class="play-overlay"><i class="fa-solid fa-circle-play"></i></div>
+      `;
+    }
+
+    resultTitle.textContent = data.title || 'Untitled video';
+    resultChannel.textContent = data.channel || '';
+
+    downloadAudioBtn.hidden = !data.audioUrl;
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetToInput() {
+    resultCard.hidden = true;
+    heroSection.hidden = false;
+    $('#singleContainer').hidden = false;
+    singleUrlInput.value = '';
+    clearSingleError();
+    currentVideoData = null;
+  }
+
+  newLinkBtn.addEventListener('click', resetToInput);
+
+  // click title to copy
+  resultTitle.addEventListener('click', async () => {
+    if (!currentVideoData) return;
+    try {
+      await navigator.clipboard.writeText(currentVideoData.title || '');
+      showToast('Title copied to clipboard', 'success');
+    } catch {
+      showToast('Could not copy title', 'error');
+    }
+  });
+
+  async function handleSingleFetch(url) {
+    clearSingleError();
+    if (!isValidYouTubeUrl(url)) {
+      showSingleError('Please enter a valid YouTube video URL.');
+      return;
+    }
+
+    singlePasteBtn.disabled = true;
+    const originalText = singlePasteBtn.querySelector('span').textContent;
+    singlePasteBtn.querySelector('span').textContent = 'Fetching…';
+
+    try {
+      const data = await fetchVideoInfo(url);
+      data.url = url;
+      showResultCard(data);
+    } catch (err) {
+      showSingleError(err.message || 'Could not fetch video details. Please try again.');
+    } finally {
+      singlePasteBtn.disabled = false;
+      singlePasteBtn.querySelector('span').textContent = originalText;
+    }
+  }
+
+  // "Paste & Download" button: try clipboard first, fall back to typed value
+  singlePasteBtn.addEventListener('click', async () => {
+    let url = singleUrlInput.value.trim();
+
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (isValidYouTubeUrl(clipboardText)) {
+        url = clipboardText.trim();
+        singleUrlInput.value = url;
       }
     } catch {
-      openModal('<p>Content not available.</p>');
+      /* clipboard access denied — fall back to typed value */
     }
+
+    if (!url) {
+      showSingleError('Paste a YouTube link or type one into the field above.');
+      return;
+    }
+
+    handleSingleFetch(url);
   });
-});
 
-// ========== Toast ==========
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  const icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
-  toast.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
-  toastContainer.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
+  // Auto-detect paste in the input field
+  singleUrlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      const value = singleUrlInput.value.trim();
+      if (isValidYouTubeUrl(value)) {
+        handleSingleFetch(value);
+      }
+    }, 0);
+  });
 
-// ========== API Calls ==========
-async function fetchVideoInfo(url) {
-  try {
-    const response = await fetch('/api/youtube-download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+  // Single download buttons
+  downloadVideoBtn.addEventListener('click', () => {
+    if (!currentVideoData || !currentVideoData.downloadUrl) {
+      showToast('No download link available for this video.', 'error');
+      return;
+    }
+    openAd();
+    const historyId = addHistoryItem({
+      title: currentVideoData.title,
+      channel: currentVideoData.channel,
+      thumbnail: currentVideoData.thumbnail,
+      type: 'video',
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Failed to fetch video');
-    return data;
-  } catch (err) {
-    throw err;
-  }
-}
+    downloadWithProgress(
+      currentVideoData.downloadUrl,
+      safeFilename(currentVideoData.title, 'mp4'),
+      downloadVideoBtn,
+      historyId
+    );
+  });
 
-async function fetchChannelVideos(channelUrl) {
-  try {
-    const response = await fetch('/api/youtube-channel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: channelUrl })
+  downloadAudioBtn.addEventListener('click', () => {
+    if (!currentVideoData || !currentVideoData.audioUrl) {
+      showToast('No audio link available for this video.', 'error');
+      return;
+    }
+    openAd();
+    const historyId = addHistoryItem({
+      title: currentVideoData.title,
+      channel: currentVideoData.channel,
+      thumbnail: currentVideoData.thumbnail,
+      type: 'audio',
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Failed to fetch channel');
-    return data.videos || [];
-  } catch (err) {
-    throw err;
+    downloadWithProgress(
+      currentVideoData.audioUrl,
+      safeFilename(currentVideoData.title, 'mp3'),
+      downloadAudioBtn,
+      historyId
+    );
+  });
+
+  /* ===================================================================
+     14. BATCH DOWNLOAD MODE
+     =================================================================== */
+  const batchUrlsInput = $('#batchUrlsInput');
+  const batchFetchBtn = $('#batchFetchBtn');
+  const batchError = $('#batchError');
+  const batchProgressText = $('#batchProgressText');
+  const batchVideoList = $('#batchVideoList');
+  const batchListActions = $('#batchListActions');
+  const batchDownloadBtn = $('#batchDownloadBtn');
+  const batchDownloadProgress = $('#batchDownloadProgress');
+
+  let batchItems = []; // { url, status: 'pending'|'ok'|'error', data, selected, el }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-}
 
-// ========== Download with Progress ==========
-async function downloadFile(url, type, videoTitle, updateProgressCb) {
-  // Return true if success
-  try {
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) throw new Error('Network error');
-    const contentLength = response.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : 0;
-    const reader = response.body.getReader();
-    let received = 0;
-    let chunks = [];
-    let lastTime = Date.now();
-    let lastReceived = 0;
+  function renderVideoListItem(container, item, onRetry) {
+    const el = document.createElement('div');
+    el.className = 'video-item';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      const now = Date.now();
-      const timeDiff = (now - lastTime) / 1000;
-      if (timeDiff >= 0.5) {
-        const speed = (received - lastReceived) / timeDiff;
-        updateProgressCb(received, total, speed);
-        lastTime = now;
-        lastReceived = received;
+    if (item.status === 'ok') {
+      el.innerHTML = `
+        <input type="checkbox" class="video-item-checkbox" checked />
+        <img class="video-item-thumb" src="${item.data.thumbnail || ''}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="video-item-info">
+          <div class="video-item-title">${escapeHtml(item.data.title || 'Untitled video')}</div>
+          <div class="video-item-channel">${escapeHtml(item.data.channel || '')}</div>
+        </div>
+      `;
+      const checkbox = el.querySelector('.video-item-checkbox');
+      checkbox.addEventListener('change', () => {
+        item.selected = checkbox.checked;
+      });
+      item.selected = true;
+    } else if (item.status === 'pending') {
+      el.innerHTML = `
+        <input type="checkbox" class="video-item-checkbox" disabled />
+        <div class="video-item-thumb"></div>
+        <div class="video-item-info">
+          <div class="video-item-title">${escapeHtml(item.url)}</div>
+          <div class="video-item-channel">Fetching…</div>
+        </div>
+      `;
+    } else {
+      el.innerHTML = `
+        <input type="checkbox" class="video-item-checkbox" disabled />
+        <div class="video-item-thumb"></div>
+        <div class="video-item-info">
+          <div class="video-item-title">${escapeHtml(item.url)}</div>
+          <div class="video-item-channel">Failed to fetch</div>
+        </div>
+        <div class="video-item-status error">
+          ❌ <button class="retry-btn">Retry</button>
+        </div>
+      `;
+      el.querySelector('.retry-btn').addEventListener('click', () => onRetry(item, el));
+    }
+
+    item.el = el;
+    container.appendChild(el);
+    return el;
+  }
+
+  async function fetchSingleForList(item, retried = false) {
+    try {
+      const data = await fetchVideoInfo(item.url);
+      item.status = 'ok';
+      item.data = data;
+    } catch (err) {
+      if (!retried) {
+        await sleep(800);
+        return fetchSingleForList(item, true);
+      }
+      item.status = 'error';
+    }
+  }
+
+  async function runFetchQueue(items, container, progressEl) {
+    progressEl.hidden = false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      progressEl.textContent = `Fetching ${i + 1} of ${items.length} videos…`;
+
+      // show a "fetching…" placeholder row first
+      renderVideoListItem(container, item, retryItem);
+
+      await fetchSingleForList(item);
+
+      // re-render this item in place now that we know the result
+      refreshListItem(container, item);
+
+      if (i < items.length - 1) {
+        await sleep(BATCH_FETCH_DELAY);
       }
     }
+
+    progressEl.hidden = true;
+  }
+
+  // Rebuild a single item's DOM node in-place
+  function refreshListItem(container, item) {
+    const placeholder = document.createElement('div');
+    renderVideoListItem(placeholder, item, retryItem);
+    const newNode = placeholder.firstElementChild;
+    if (item.el && item.el.parentNode === container) {
+      container.replaceChild(newNode, item.el);
+    } else {
+      container.appendChild(newNode);
+    }
+    item.el = newNode;
+  }
+
+  async function retryItem(item, _el) {
+    item.status = 'pending';
+    refreshListItem(item.el.parentNode, item);
+    await fetchSingleForList(item, false);
+    refreshListItem(item.el.parentNode, item);
+    updateListActionsVisibility();
+  }
+
+  function updateListActionsVisibility() {
+    const anyOk = batchItems.some((i) => i.status === 'ok');
+    batchListActions.hidden = !anyOk;
+    channelListActions.hidden = !channelItems.some((i) => i.status === 'ok');
+  }
+
+  batchFetchBtn.addEventListener('click', async () => {
+    batchError.hidden = true;
+    const lines = batchUrlsInput.value
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      batchError.hidden = false;
+      batchError.textContent = 'Paste at least one YouTube URL, one per line.';
+      return;
+    }
+
+    const invalid = lines.filter((l) => !isValidYouTubeUrl(l));
+    if (invalid.length === lines.length) {
+      batchError.hidden = false;
+      batchError.textContent = 'None of the pasted lines look like valid YouTube URLs.';
+      return;
+    }
+
+    batchVideoList.innerHTML = '';
+    batchItems = lines
+      .filter((l) => isValidYouTubeUrl(l))
+      .map((url) => ({ url, status: 'pending', selected: false, el: null }));
+
+    if (invalid.length) {
+      showToast(`Skipped ${invalid.length} invalid line(s).`, 'info');
+    }
+
+    batchFetchBtn.disabled = true;
+    batchListActions.hidden = true;
+    await runFetchQueue(batchItems, batchVideoList, batchProgressText);
+    batchFetchBtn.disabled = false;
+    updateListActionsVisibility();
+
+    const okCount = batchItems.filter((i) => i.status === 'ok').length;
+    showToast(`Fetched ${okCount} of ${batchItems.length} videos.`, okCount ? 'success' : 'error');
+  });
+
+  /* ---- concurrent downloads for batch/channel lists ---- */
+  async function downloadSelectedFromList(items, progressLabelEl, downloadBtn) {
+    const selected = items.filter((i) => i.status === 'ok' && i.selected && i.data);
+    if (selected.length === 0) {
+      showToast('Select at least one video to download.', 'error');
+      return;
+    }
+
+    downloadBtn.disabled = true;
+    let completed = 0;
+    let failed = 0;
+    let adOpened = false;
+
+    progressLabelEl.textContent = `0 / ${selected.length} completed`;
+
+    const queue = [...selected];
+
+    async function worker() {
+      while (queue.length) {
+        const item = queue.shift();
+        if (!adOpened) {
+          openAd();
+          adOpened = true;
+        }
+
+        const data = item.data;
+        const historyId = addHistoryItem({
+          title: data.title,
+          channel: data.channel,
+          thumbnail: data.thumbnail,
+          type: 'video',
+        });
+
+        try {
+          if (!data.downloadUrl) throw new Error('No download link');
+          await downloadWithProgressSilent(data.downloadUrl, safeFilename(data.title, 'mp4'), historyId);
+          completed++;
+        } catch {
+          failed++;
+          updateHistoryItem(historyId, { completed: true, progress: 0, speed: 'Failed' });
+        }
+
+        progressLabelEl.textContent = `${completed + failed} / ${selected.length} completed`;
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(CONCURRENT_DOWNLOADS, selected.length) }, worker);
+    await Promise.all(workers);
+
+    downloadBtn.disabled = false;
+    showToast(`Downloaded ${completed} of ${selected.length} videos${failed ? `, ${failed} failed` : ''}.`, failed ? 'info' : 'success');
+  }
+
+  // Variant of downloadWithProgress without a button (used for concurrent batch/channel downloads)
+  async function downloadWithProgressSilent(url, filename, historyId) {
+    const response = await fetch(url);
+    if (!response.ok || !response.body) throw new Error('Download failed');
+
+    const contentLength = response.headers.get('Content-Length');
+    const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+    const reader = response.body.getReader();
+
+    let receivedBytes = 0;
+    let lastTimestamp = performance.now();
+    let lastBytes = 0;
+    const chunks = [];
+
+    const timer = setInterval(() => {
+      const now = performance.now();
+      const elapsedSec = (now - lastTimestamp) / 1000 || 1;
+      const speed = formatSpeed((receivedBytes - lastBytes) / elapsedSec);
+      updateHistoryItem(historyId, {
+        loadedMb: receivedBytes / (1024 * 1024),
+        totalMb: totalBytes / (1024 * 1024),
+        speed,
+        progress: totalBytes ? Math.min(100, (receivedBytes / totalBytes) * 100) : 0,
+      });
+      lastTimestamp = now;
+      lastBytes = receivedBytes;
+    }, 500);
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        receivedBytes += value.length;
+      }
+    } finally {
+      clearInterval(timer);
+    }
+
     const blob = new Blob(chunks);
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    const extension = type === 'mp3' ? 'mp3' : 'mp4';
-    a.download = `${videoTitle || 'video'}.${extension}`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(blobUrl);
-    return true;
-  } catch (err) {
-    // Fallback: open in new tab (no progress)
-    window.open(url, '_blank');
-    return false;
-  }
-}
 
-// ========== Single Video Download ==========
-singleDownloadBtn.addEventListener('click', async () => {
-  let url = singleUrl.value.trim();
-  if (!url) {
-    try {
-      const clipText = await navigator.clipboard.readText();
-      if (isValidYouTubeUrl(clipText)) url = clipText;
-    } catch {}
-  }
-  if (!isValidYouTubeUrl(url)) {
-    showError('Please paste a valid YouTube URL.');
-    return;
-  }
-  await handleSingleDownload(url);
-});
-
-// Auto-detect paste
-singleUrl.addEventListener('input', async (e) => {
-  const val = e.target.value.trim();
-  if (isValidYouTubeUrl(val)) {
-    await handleSingleDownload(val);
-  }
-});
-
-async function handleSingleDownload(url) {
-  clearError();
-  showLoading(singleDownloadBtn, true);
-  try {
-    const data = await fetchVideoInfo(url);
-    currentVideoData = data;
-    displayResult(data);
-    hideHero();
-  } catch (err) {
-    showError(err.message);
-  } finally {
-    showLoading(singleDownloadBtn, false);
-  }
-}
-
-function displayResult(data) {
-  resultCard.style.display = 'block';
-  const videoId = extractYouTubeId(data.url || singleUrl.value);
-  resultPlayer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
-  resultTitle.textContent = data.title;
-  resultTitle.title = 'Click to copy full title';
-  resultChannel.textContent = data.channel;
-  downloadHdBtn.dataset.url = data.downloads?.hd || data.url;
-  downloadMp3Btn.dataset.url = data.downloads?.mp3 || '';
-  downloadMp3Btn.style.display = data.downloads?.mp3 ? 'inline-flex' : 'none';
-}
-
-function hideHero() {
-  document.querySelector('.hero').style.display = 'none';
-}
-
-function showHero() {
-  document.querySelector('.hero').style.display = '';
-  resultCard.style.display = 'none';
-  currentVideoData = null;
-}
-
-newLinkBtn.addEventListener('click', showHero);
-
-downloadHdBtn.addEventListener('click', () => startSingleDownload('hd'));
-downloadMp3Btn.addEventListener('click', () => startSingleDownload('mp3'));
-
-async function startSingleDownload(type) {
-  if (!currentVideoData) return;
-  if (!adOpenedSession) {
-    window.open(AD_URL, '_blank');
-    adOpenedSession = true;
-  }
-  const url = type === 'hd' ? currentVideoData.downloads?.hd : currentVideoData.downloads?.mp3;
-  if (!url) {
-    showToast('Download link not available', 'error');
-    return;
-  }
-  const btn = type === 'hd' ? downloadHdBtn : downloadMp3Btn;
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  let downloadEntry = addToHistory(currentVideoData, type);
-  const updateProgress = (received, total, speed) => {
-    const progress = total ? (received / total) * 100 : 0;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${formatBytes(received)}/${formatBytes(total)} · ${formatSpeed(speed)}`;
-    updateHistoryProgress(downloadEntry.id, received, total, speed);
-  };
-  try {
-    await downloadFile(url, type, currentVideoData.title, updateProgress);
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-    completeHistory(downloadEntry.id);
-    showToast('Download complete!');
-  } catch {
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-    failHistory(downloadEntry.id);
-    showToast('Download failed', 'error');
-  }
-}
-
-// ========== Batch Mode ==========
-batchFetchBtn.addEventListener('click', async () => {
-  const lines = batchUrls.value.split('\n').filter(line => line.trim() !== '');
-  if (lines.length === 0) return showToast('Paste at least one URL', 'error');
-  batchVideos = [];
-  batchList.innerHTML = '';
-  batchActions.style.display = 'none';
-  batchProgress.style.display = 'block';
-  for (let i = 0; i < lines.length; i++) {
-    const url = lines[i].trim();
-    batchProgress.textContent = `Fetching ${i + 1} of ${lines.length} videos…`;
-    try {
-      if (!isValidYouTubeUrl(url)) throw new Error('Invalid URL');
-      const data = await fetchVideoInfo(url);
-      batchVideos.push({ ...data, url, status: 'ok' });
-    } catch (err) {
-      batchVideos.push({ url, status: 'error', error: err.message });
-    }
-    // delay between requests
-    if (i < lines.length - 1) await new Promise(resolve => setTimeout(resolve, 1200));
-  }
-  batchProgress.style.display = 'none';
-  renderBatchList();
-});
-
-function renderBatchList() {
-  batchList.innerHTML = batchVideos.map((vid, idx) => {
-    const checked = vid.status === 'ok' ? 'checked' : '';
-    const disabled = vid.status !== 'ok' ? 'disabled' : '';
-    return `
-      <div class="batch-item">
-        <input type="checkbox" ${checked} ${disabled} data-index="${idx}">
-        <img src="${vid.thumbnail || ''}" onerror="this.src='data:image/svg+xml,...'">
-        <div class="info">
-          <div class="title">${vid.title || vid.url}</div>
-          <div class="channel">${vid.channel || ''}</div>
-        </div>
-        ${vid.status === 'error' ? `<button class="retry-btn" data-index="${idx}">❌ Retry</button>` : ''}
-      </div>
-    `;
-  }).join('');
-
-  batchActions.style.display = 'flex';
-  document.querySelectorAll('.batch-item .retry-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const idx = e.target.dataset.index;
-      await retryBatchVideo(idx);
+    updateHistoryItem(historyId, {
+      completed: true,
+      progress: 100,
+      loadedMb: receivedBytes / (1024 * 1024),
+      totalMb: totalBytes ? totalBytes / (1024 * 1024) : receivedBytes / (1024 * 1024),
     });
-  });
-}
-
-async function retryBatchVideo(idx) {
-  const vid = batchVideos[idx];
-  try {
-    const data = await fetchVideoInfo(vid.url);
-    batchVideos[idx] = { ...data, url: vid.url, status: 'ok' };
-  } catch (err) {
-    batchVideos[idx].error = err.message;
   }
-  renderBatchList();
-}
 
-batchDownloadSelectedBtn.addEventListener('click', () => startBatchDownload());
+  batchDownloadBtn.addEventListener('click', () => downloadSelectedFromList(batchItems, batchDownloadProgress, batchDownloadBtn));
 
-async function startBatchDownload() {
-  const checkboxes = batchList.querySelectorAll('input[type="checkbox"]:checked');
-  if (checkboxes.length === 0) return showToast('Select at least one video', 'error');
-  if (!adOpenedSession) {
-    window.open(AD_URL, '_blank');
-    adOpenedSession = true;
-  }
-  const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
-  batchDownloadSelectedBtn.disabled = true;
-  let completed = 0;
-  const total = selectedIndices.length;
-  const queue = selectedIndices.slice();
-  const running = new Set();
+  /* ===================================================================
+     15. CHANNEL DOWNLOAD MODE
+     =================================================================== */
+  const channelUrlInput = $('#channelUrlInput');
+  const channelFetchBtn = $('#channelFetchBtn');
+  const channelError = $('#channelError');
+  const channelProgressText = $('#channelProgressText');
+  const channelVideoList = $('#channelVideoList');
+  const channelListActions = $('#channelListActions');
+  const channelDownloadBtn = $('#channelDownloadBtn');
+  const channelDownloadProgress = $('#channelDownloadProgress');
 
-  const updateSummary = () => {
-    batchSummary.textContent = `Downloaded ${completed} of ${total}`;
-  };
-  updateSummary();
+  let channelItems = [];
 
-  const worker = async (idx) => {
-    const vid = batchVideos[idx];
-    const downloadEntry = addToHistory(vid, 'hd');
-    try {
-      const url = vid.downloads?.hd || vid.url;
-      await downloadFile(url, 'hd', vid.title, (received, total, speed) => {
-        updateHistoryProgress(downloadEntry.id, received, total, speed);
-      });
-      completeHistory(downloadEntry.id);
-      completed++;
-      updateSummary();
-    } catch {
-      failHistory(downloadEntry.id);
+  channelFetchBtn.addEventListener('click', async () => {
+    channelError.hidden = true;
+    const url = channelUrlInput.value.trim();
+
+    if (!isValidChannelUrl(url)) {
+      channelError.hidden = false;
+      channelError.textContent = 'Please enter a valid YouTube channel URL (e.g. youtube.com/@channelname).';
+      return;
     }
-  };
 
-  const processNext = async () => {
-    if (queue.length === 0) return;
-    const idx = queue.shift();
-    running.add(idx);
-    await worker(idx);
-    running.delete(idx);
-    await processNext();
-  };
+    channelFetchBtn.disabled = true;
+    channelVideoList.innerHTML = '';
+    channelListActions.hidden = true;
+    channelProgressText.hidden = false;
+    channelProgressText.textContent = 'Fetching channel videos…';
 
-  const concurrency = Math.min(MAX_CONCURRENT_DOWNLOADS, queue.length);
-  const tasks = Array(concurrency).fill().map(() => processNext());
-  await Promise.all(tasks);
-  batchDownloadSelectedBtn.disabled = false;
-  showToast(`Batch download finished: ${completed} of ${total} successful`);
-}
-
-// ========== Channel Mode ==========
-channelFetchBtn.addEventListener('click', async () => {
-  const url = channelUrl.value.trim();
-  if (!url) return showToast('Enter a channel URL', 'error');
-  channelVideos = [];
-  channelList.innerHTML = '';
-  channelActions.style.display = 'none';
-  channelProgress.style.display = 'block';
-  channelProgress.textContent = 'Fetching channel videos…';
-  try {
-    const videoUrls = await fetchChannelVideos(url);
-    channelProgress.textContent = `Found ${videoUrls.length} videos. Fetching details…`;
-    for (let i = 0; i < videoUrls.length; i++) {
-      channelProgress.textContent = `Fetching details ${i + 1} of ${videoUrls.length}`;
-      try {
-        const data = await fetchVideoInfo(videoUrls[i]);
-        channelVideos.push({ ...data, url: videoUrls[i], status: 'ok' });
-      } catch {
-        channelVideos.push({ url: videoUrls[i], status: 'error' });
+    try {
+      const { videos } = await fetchChannelVideos(url);
+      if (!videos || videos.length === 0) {
+        throw new Error('No videos found for this channel.');
       }
-      if (i < videoUrls.length - 1) await new Promise(r => setTimeout(r, 1200));
-    }
-    channelProgress.style.display = 'none';
-    renderChannelList();
-  } catch (err) {
-    channelProgress.style.display = 'none';
-    showToast(err.message, 'error');
-  }
-});
 
-function renderChannelList() {
-  channelList.innerHTML = channelVideos.map((vid, idx) => {
-    const checked = vid.status === 'ok' ? 'checked' : '';
-    const disabled = vid.status !== 'ok' ? 'disabled' : '';
-    return `
-      <div class="batch-item">
-        <input type="checkbox" ${checked} ${disabled} data-index="${idx}">
-        <img src="${vid.thumbnail || ''}" onerror="this.src='data:image/svg+xml,...'">
-        <div class="info">
-          <div class="title">${vid.title || vid.url}</div>
-          <div class="channel">${vid.channel || ''}</div>
-        </div>
-        ${vid.status === 'error' ? `<button class="retry-btn" data-index="${idx}">❌ Retry</button>` : ''}
-      </div>
-    `;
-  }).join('');
-  channelActions.style.display = 'flex';
-  document.querySelectorAll('#channelList .retry-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const idx = e.target.dataset.index;
-      await retryChannelVideo(idx);
+      channelItems = videos.slice(0, 50).map((v) => ({
+        url: typeof v === 'string' ? v : v.url,
+        status: 'pending',
+        selected: false,
+        el: null,
+      }));
+
+      await runFetchQueue(channelItems, channelVideoList, channelProgressText);
+      updateListActionsVisibility();
+
+      const okCount = channelItems.filter((i) => i.status === 'ok').length;
+      showToast(`Fetched ${okCount} of ${channelItems.length} videos.`, okCount ? 'success' : 'error');
+    } catch (err) {
+      channelProgressText.hidden = true;
+      channelError.hidden = false;
+      channelError.textContent = err.message || 'Could not fetch this channel.';
+    } finally {
+      channelFetchBtn.disabled = false;
+    }
+  });
+
+  channelDownloadBtn.addEventListener('click', () => downloadSelectedFromList(channelItems, channelDownloadProgress, channelDownloadBtn));
+
+  /* ===================================================================
+     16. Q&A ACCORDION
+     =================================================================== */
+  $$('.qa-item').forEach((item) => {
+    const question = item.querySelector('.qa-question');
+    const answer = item.querySelector('.qa-answer');
+
+    question.addEventListener('click', () => {
+      const isOpen = item.classList.contains('open');
+
+      // close all
+      $$('.qa-item').forEach((other) => {
+        other.classList.remove('open');
+        other.querySelector('.qa-question').setAttribute('aria-expanded', 'false');
+        other.querySelector('.qa-answer').style.maxHeight = null;
+      });
+
+      if (!isOpen) {
+        item.classList.add('open');
+        question.setAttribute('aria-expanded', 'true');
+        answer.style.maxHeight = `${answer.scrollHeight}px`;
+      }
     });
   });
-}
 
-async function retryChannelVideo(idx) {
-  const vid = channelVideos[idx];
-  try {
-    const data = await fetchVideoInfo(vid.url);
-    channelVideos[idx] = { ...data, url: vid.url, status: 'ok' };
-  } catch {
-    channelVideos[idx].error = 'Failed';
-  }
-  renderChannelList();
-}
-
-channelDownloadSelectedBtn.addEventListener('click', async () => {
-  const checkboxes = channelList.querySelectorAll('input[type="checkbox"]:checked');
-  if (checkboxes.length === 0) return showToast('Select at least one video', 'error');
-  if (!adOpenedSession) {
-    window.open(AD_URL, '_blank');
-    adOpenedSession = true;
-  }
-  const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
-  channelDownloadSelectedBtn.disabled = true;
-  let completed = 0;
-  const total = selectedIndices.length;
-  const queue = selectedIndices.slice();
-  const updateSummary = () => {
-    channelSummary.textContent = `Downloaded ${completed} of ${total}`;
-  };
-  updateSummary();
-
-  const worker = async (idx) => {
-    const vid = channelVideos[idx];
-    const downloadEntry = addToHistory(vid, 'hd');
-    try {
-      const url = vid.downloads?.hd || vid.url;
-      await downloadFile(url, 'hd', vid.title, (received, total, speed) => {
-        updateHistoryProgress(downloadEntry.id, received, total, speed);
+  /* ===================================================================
+     17. STEP CARD SCROLL ANIMATIONS
+     =================================================================== */
+  const stepObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          stepObserver.unobserve(entry.target);
+        }
       });
-      completeHistory(downloadEntry.id);
-      completed++;
-      updateSummary();
+    },
+    { threshold: 0.2 }
+  );
+
+  $$('.step-card').forEach((card) => stepObserver.observe(card));
+
+  /* ===================================================================
+     18. BLOG PAGE
+     =================================================================== */
+  const blogContent = $('#blogContent');
+  let blogLoaded = false;
+
+  async function loadBlogContent() {
+    if (blogLoaded) return;
+    try {
+      const res = await fetch('/content/blog.html');
+      if (!res.ok) throw new Error('Failed to load');
+      blogContent.innerHTML = await res.text();
+      blogLoaded = true;
     } catch {
-      failHistory(downloadEntry.id);
+      blogContent.innerHTML = '<p class="loading-text">Could not load articles right now. Please try again later.</p>';
     }
-  };
-
-  const processNext = async () => {
-    if (queue.length === 0) return;
-    const idx = queue.shift();
-    await worker(idx);
-    await processNext();
-  };
-
-  const concurrency = Math.min(MAX_CONCURRENT_DOWNLOADS, queue.length);
-  const tasks = Array(concurrency).fill().map(() => processNext());
-  await Promise.all(tasks);
-  channelDownloadSelectedBtn.disabled = false;
-  showToast(`Channel download finished: ${completed} of ${total} successful`);
-});
-
-// ========== History ==========
-function addToHistory(video, type) {
-  const id = Date.now().toString() + Math.random();
-  const entry = {
-    id,
-    title: video.title || video.url,
-    channel: video.channel || '',
-    thumbnail: video.thumbnail || '',
-    type,
-    received: 0,
-    total: 0,
-    speed: 0,
-    status: 'downloading',
-    timestamp: Date.now()
-  };
-  downloadHistory.push(entry);
-  saveHistory();
-  renderHistory();
-  return entry;
-}
-
-function updateHistoryProgress(id, received, total, speed) {
-  const entry = downloadHistory.find(e => e.id === id);
-  if (!entry) return;
-  entry.received = received;
-  entry.total = total;
-  entry.speed = speed;
-  saveHistory();
-  renderHistory();
-}
-
-function completeHistory(id) {
-  const entry = downloadHistory.find(e => e.id === id);
-  if (entry) entry.status = 'completed';
-  saveHistory();
-  renderHistory();
-}
-
-function failHistory(id) {
-  const entry = downloadHistory.find(e => e.id === id);
-  if (entry) entry.status = 'failed';
-  saveHistory();
-  renderHistory();
-}
-
-function deleteHistory(id) {
-  downloadHistory = downloadHistory.filter(e => e.id !== id);
-  saveHistory();
-  renderHistory();
-}
-
-function saveHistory() {
-  localStorage.setItem('ytDownloadHistory', JSON.stringify(downloadHistory));
-}
-
-function renderHistory() {
-  // auto-delete entries older than 24h
-  const now = Date.now();
-  downloadHistory = downloadHistory.filter(e => now - e.timestamp < 24 * 60 * 60 * 1000);
-  saveHistory();
-  if (downloadHistory.length === 0) {
-    historySection.style.display = 'none';
-    return;
   }
-  historySection.style.display = 'block';
-  historyList.innerHTML = downloadHistory.map(entry => `
-    <div class="history-item">
-      <img src="${entry.thumbnail || ''}" onerror="this.style.display='none'">
-      <div style="flex:1">
-        <div class="title">${entry.title}</div>
-        <div class="channel">${entry.channel}</div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width:${entry.total ? (entry.received/entry.total)*100 : 0}%"></div>
-        </div>
-        <div style="font-size:0.8rem;">${formatBytes(entry.received)} / ${formatBytes(entry.total)} · ${formatSpeed(entry.speed)}</div>
-        ${entry.status === 'completed' ? '<span class="badge" style="background:var(--primary);color:white;">✅ Completed</span>' : ''}
-      </div>
-      <button class="delete-btn" data-id="${entry.id}"><i class="fas fa-trash"></i></button>
-    </div>
-  `).join('');
 
-  document.querySelectorAll('.history-item .delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => deleteHistory(btn.dataset.id));
+  /* ===================================================================
+     19. LEGAL / ABOUT MODALS
+     =================================================================== */
+  const modalOverlay = $('#modalOverlay');
+  const modalBody = $('#modalBody');
+  const modalClose = $('#modalClose');
+
+  const modalSources = {
+    disclaimer: '/content/disclaimer.html',
+    privacy: '/content/privacy.html',
+    terms: '/content/terms.html',
+    about: '/content/about.html',
+  };
+
+  async function openModal(key) {
+    modalBody.innerHTML = '<p class="loading-text">Loading…</p>';
+    modalOverlay.classList.add('active');
+    try {
+      const res = await fetch(modalSources[key]);
+      if (!res.ok) throw new Error('Failed to load');
+      modalBody.innerHTML = await res.text();
+    } catch {
+      modalBody.innerHTML = '<p>Could not load this page right now. Please try again later.</p>';
+    }
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('active');
+  }
+
+  $$('[data-modal]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      openModal(el.dataset.modal);
+    });
   });
-}
 
-// ========== Helpers ==========
-function isValidYouTubeUrl(url) {
-  return /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]{11}/.test(url);
-}
-
-function extractYouTubeId(url) {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/);
-  return match ? match[1] : '';
-}
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function formatSpeed(bytesPerSec) {
-  return formatBytes(bytesPerSec) + '/s';
-}
-
-function showLoading(btn, loading) {
-  btn.disabled = loading;
-  btn.innerHTML = loading ? '<i class="fas fa-spinner fa-spin"></i> Loading...' : btn.dataset.originalText || btn.innerHTML;
-  if (!loading) btn.dataset.originalText = '';
-}
-
-function showError(msg) {
-  singleError.textContent = msg;
-  singleError.style.display = 'block';
-}
-
-function clearError() {
-  singleError.style.display = 'none';
-}
-
-// ========== Scroll Animations ==========
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
+  modalClose.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
   });
-}, { threshold: 0.2 });
-
-stepCards.forEach(card => observer.observe(card));
-
-// ========== Q&A Accordion ==========
-document.querySelectorAll('.qa-question').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const answer = btn.nextElementSibling;
-    answer.classList.toggle('open');
-    btn.querySelector('i').classList.toggle('fa-chevron-up');
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
   });
-});
 
-// ========== Initial history render ==========
-renderHistory();
+  /* ===================================================================
+     20. INIT
+     =================================================================== */
+  setMode('single');
+  applyModeVisibility();
+  renderHistory();
+})();
