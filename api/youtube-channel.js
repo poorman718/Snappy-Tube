@@ -1,34 +1,97 @@
 /**
- * api/youtube-download.js
+ * api/youtube-channel.js
  * ---------------------------------------------------------------------
  * Vercel serverless function (Node runtime).
- * Accepts: POST { url: "<YouTube video URL>" }
- * Returns: {
- *   title, channel, thumbnail,
- *   downloadUrl,  // highest quality video+audio mp4
- *   audioUrl      // best audio-only stream (mp3/m4a), if available
- * }
+ * Accepts: POST { url: "<YouTube channel URL>" }
+ * Returns: { videos: ["https://www.youtube.com/watch?v=...", ...] }
  *
- * Proxies the request to RapidAPI so the API key never reaches the
- * browser. Configure RAPIDAPI_KEY as an environment variable on Vercel.
- * The hardcoded fallback below is only meant for local development —
- * replace it with your own key before deploying.
+ * Resolves the channel URL/handle to a channel ID, then fetches up to
+ * 50 of its most recent uploads (paginating with the API's continuation
+ * token if needed). Proxies through RapidAPI so the key stays server-side.
  * ---------------------------------------------------------------------
  */
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || 'YOUR_RAPIDAPI_KEY_HERE';
 const RAPIDAPI_HOST = 'youtube-media-downloader.p.rapidapi.com';
+const MAX_VIDEOS = 50;
 
-// Matches youtube.com/watch?v=, youtu.be/, youtube.com/shorts/, youtube.com/embed/
-const VIDEO_ID_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/i;
+function rapidHeaders() {
+  return {
+    'x-rapidapi-key': RAPIDAPI_KEY,
+    'x-rapidapi-host': RAPIDAPI_HOST,
+  };
+}
 
-function extractVideoId(url) {
-  const match = (url || '').match(VIDEO_ID_REGEX);
-  return match ? match[1] : null;
+/**
+ * Pulls a channel identifier out of common YouTube channel URL shapes:
+ *  - youtube.com/channel/UCxxxxxxxx  -> returns the UC... id directly
+ *  - youtube.com/@handle             -> returns { handle: "@handle" }
+ *  - youtube.com/c/Name or /user/Name -> returns { handle: "Name" }
+ */
+function parseChannelInput(url) {
+  const trimmed = (url || '').trim();
+
+  const idMatch = trimmed.match(/youtube\.com\/channel\/([\w-]+)/i);
+  if (idMatch) return { channelId: idMatch[1] };
+
+  const handleMatch = trimmed.match(/youtube\.com\/@([\w.-]+)/i);
+  if (handleMatch) return { handle: `@${handleMatch[1]}` };
+
+  const legacyMatch = trimmed.match(/youtube\.com\/(?:c|user)\/([\w-]+)/i);
+  if (legacyMatch) return { handle: legacyMatch[1] };
+
+  // If the user pasted a bare handle or channel ID
+  if (/^UC[\w-]{20,}$/.test(trimmed)) return { channelId: trimmed };
+  if (trimmed.startsWith('@')) return { handle: trimmed };
+
+  return null;
+}
+
+/** Resolve a handle/custom name to a channel ID using the search endpoint. */
+async function resolveChannelId(handle) {
+  const searchUrl = `https://${RAPIDAPI_HOST}/v2/search/channels?query=${encodeURIComponent(handle)}`;
+  const res = await fetch(searchUrl, { headers: rapidHeaders() });
+  if (!res.ok) throw new Error(`Channel search failed (${res.status}).`);
+
+  const data = await res.json();
+  const items = data.items || data.channels || [];
+  if (!items.length) return null;
+
+  // Prefer an exact handle match if the API returns one
+  const exact = items.find((c) => (c.handle || '').toLowerCase() === handle.toLowerCase());
+  return (exact || items[0]).id || (exact || items[0]).channelId || null;
+}
+
+/** Fetch up to MAX_VIDEOS upload URLs for a channel, paginating as needed. */
+async function fetchChannelUploads(channelId) {
+  const videos = [];
+  let nextToken = null;
+
+  do {
+    const params = new URLSearchParams({ channelId, type: 'videos' });
+    if (nextToken) params.set('nextToken', nextToken);
+
+    const res = await fetch(`https://${RAPIDAPI_HOST}/v2/channel/videos?${params.toString()}`, {
+      headers: rapidHeaders(),
+    });
+    if (!res.ok) throw new Error(`Channel videos request failed (${res.status}).`);
+
+    const data = await res.json();
+    const items = data.items || [];
+
+    for (const item of items) {
+      const id = item.id || item.videoId;
+      if (id) videos.push(`https://www.youtube.com/watch?v=${id}`);
+      if (videos.length >= MAX_VIDEOS) break;
+    }
+
+    nextToken = videos.length < MAX_VIDEOS ? data.continuation || data.nextToken : null;
+  } while (nextToken && videos.length < MAX_VIDEOS);
+
+  return videos.slice(0, MAX_VIDEOS);
 }
 
 module.exports = async (req, res) => {
-  // Basic CORS / method guard
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -47,69 +110,33 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing "url" in request body.' });
     }
 
-    const videoId = extractVideoId(url);
-    if (!videoId) {
-      return res.status(400).json({ error: 'Could not extract a video ID from that URL.' });
-    }
-
     if (!RAPIDAPI_KEY || RAPIDAPI_KEY === 'YOUR_RAPIDAPI_KEY_HERE') {
       return res.status(500).json({ error: 'Server is missing a RapidAPI key. Set RAPIDAPI_KEY in your environment.' });
     }
 
-    const apiUrl = `https://${RAPIDAPI_HOST}/v2/video/details?videoId=${encodeURIComponent(videoId)}`;
-
-    const apiRes = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
-        'x-rapidapi-host': RAPIDAPI_HOST,
-      },
-    });
-
-    if (!apiRes.ok) {
-      return res.status(apiRes.status).json({ error: `Upstream API error (${apiRes.status}).` });
+    const parsed = parseChannelInput(url);
+    if (!parsed) {
+      return res.status(400).json({ error: 'Could not recognize that channel URL.' });
     }
 
-    const data = await apiRes.json();
-
-    if (!data || data.status === false) {
-      return res.status(404).json({ error: 'Video not found or unavailable.' });
+    let channelId = parsed.channelId;
+    if (!channelId && parsed.handle) {
+      channelId = await resolveChannelId(parsed.handle);
     }
 
-    // ---- Normalize the response ----
-    const title = data.title || 'Untitled video';
-    const channel = (data.channel && data.channel.name) || data.channelTitle || '';
-
-    const thumbnails = data.thumbnails || [];
-    const thumbnail = thumbnails.length ? thumbnails[thumbnails.length - 1].url : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
-    // Video formats: pick the highest-resolution stream that includes audio,
-    // falling back to the highest-resolution video-only stream.
-    const videoFormats = (data.videos && data.videos.items) || [];
-    const withAudio = videoFormats.filter((f) => f.hasAudio);
-    const sortedVideo = (withAudio.length ? withAudio : videoFormats)
-      .slice()
-      .sort((a, b) => (b.height || b.quality || 0) - (a.height || a.quality || 0));
-    const downloadUrl = sortedVideo.length ? sortedVideo[0].url : null;
-
-    // Audio-only formats: pick the highest bitrate
-    const audioFormats = (data.audios && data.audios.items) || [];
-    const sortedAudio = audioFormats.slice().sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-    const audioUrl = sortedAudio.length ? sortedAudio[0].url : null;
-
-    if (!downloadUrl) {
-      return res.status(502).json({ error: 'No downloadable video stream was returned for this video.' });
+    if (!channelId) {
+      return res.status(404).json({ error: 'Could not find a channel matching that URL.' });
     }
 
-    return res.status(200).json({
-      title,
-      channel,
-      thumbnail,
-      downloadUrl,
-      audioUrl,
-    });
+    const videos = await fetchChannelUploads(channelId);
+
+    if (!videos.length) {
+      return res.status(404).json({ error: 'No videos were found for this channel.' });
+    }
+
+    return res.status(200).json({ videos });
   } catch (err) {
-    console.error('youtube-download error:', err);
+    console.error('youtube-channel error:', err);
     return res.status(500).json({ error: 'Unexpected server error. Please try again.' });
   }
 };
