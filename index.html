@@ -1,1225 +1,218 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snappy Down</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- 👇 ADD YOUR FAVICON HERE 👇 -->
-    <link rel="icon" type="image/png" href="favicon.svg">
-    <style>
-        :root {
-            --bg: #faf8f5;
-            --bg-secondary: #f0ede8;
-            --surface: #ffffff;
-            --surface-hover: #f9f7f4;
-            --text: #1a1a1a;
-            --text-secondary: #555555;
-            --text-muted: #888888;
-            --border: #e0dcd5;
-            --border-strong: #c5bfb3;
-            --accent: #c73e3e;
-            --accent-hover: #b53535;
-            --accent-light: #fdf2f2;
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
-            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
-            --radius-sm: 10px;
-            --radius: 14px;
-            --radius-lg: 18px;
-            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            --navbar-height: 62px;
-            --toast-bg: #1a1a1a;
-            --toast-text: #ffffff;
-            --overlay-bg: rgba(0, 0, 0, 0.5);
-            --input-bg: #faf8f5;
-        }
-
-        body.dark {
-            --bg: #1a1a1c;
-            --bg-secondary: #222225;
-            --surface: #28282b;
-            --surface-hover: #2f2f33;
-            --text: #e8e8e8;
-            --text-secondary: #b0b0b0;
-            --text-muted: #7a7a7a;
-            --border: #3a3a3f;
-            --border-strong: #505058;
-            --accent: #e05555;
-            --accent-hover: #c94848;
-            --accent-light: #2a1f1f;
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.20);
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.30);
-            --input-bg: #222225;
-            --toast-bg: #e8e8e8;
-            --toast-text: #1a1a1c;
-            --overlay-bg: rgba(0, 0, 0, 0.7);
-        }
-
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            font-size: 16px;
-        }
-
-        body {
-            font-family: var(--font);
-            background-color: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            transition: background-color var(--transition), color var(--transition);
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        .navbar {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: var(--surface);
-            border-bottom: 2px solid var(--border);
-            height: var(--navbar-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            box-shadow: var(--shadow-sm);
-            transition: background var(--transition), border var(--transition);
-            gap: 16px;
-        }
-
-        .navbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 1.35rem;
-            color: var(--text);
-            text-decoration: none;
-            letter-spacing: -0.3px;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .navbar-brand i {
-            color: var(--accent);
-            font-size: 1.5rem;
-        }
-
-        .navbar-links {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            list-style: none;
-        }
-
-        .navbar-links a {
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 25px;
-            transition: all var(--transition);
-            font-size: 0.95rem;
-            white-space: nowrap;
-        }
-
-        .navbar-links a:hover,
-        .navbar-links a.active {
-            color: var(--text);
-            background: var(--bg-secondary);
-        }
-
-        .navbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .btn-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            background: var(--surface);
-            color: var(--text);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            transition: all var(--transition);
-            flex-shrink: 0;
-        }
-
-        .btn-icon:hover {
-            background: var(--surface-hover);
-            border-color: var(--border-strong);
-        }
-        .btn-icon:active {
-            transform: scale(0.94);
-        }
-
-        .hamburger {
-            display: none;
-        }
-
-        .drawer-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: var(--overlay-bg);
-            z-index: 1100;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-        .drawer-overlay.open {
-            display: block;
-            opacity: 1;
-        }
-
-        .drawer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: var(--surface);
-            z-index: 1150;
-            transform: translateX(-100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 24px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            border-right: 2px solid var(--border);
-            box-shadow: var(--shadow-lg);
-        }
-        .drawer.open {
-            transform: translateX(0);
-        }
-        .drawer a {
-            display: block;
-            text-decoration: none;
-            color: var(--text);
-            font-weight: 500;
-            padding: 12px 16px;
-            border-radius: var(--radius-sm);
-            transition: all var(--transition);
-            font-size: 1rem;
-        }
-        .drawer a:hover {
-            background: var(--bg-secondary);
-        }
-        .drawer-close {
-            align-self: flex-end;
-            background: none;
-            border: none;
-            color: var(--text);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 6px;
-        }
-
-        .main-container {
-            max-width: 680px;
-            margin: 0 auto;
-            padding: 28px 16px 40px;
-            transition: max-width var(--transition);
-        }
-
-        @media (min-width: 1024px) {
-            .main-container {
-                max-width: 960px;
-                padding: 36px 24px 48px;
-            }
-        }
-
-        .input-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 28px 24px;
-            box-shadow: var(--shadow);
-            transition: all var(--transition);
-            position: relative;
-        }
-        .input-card.hidden {
-            display: none;
-        }
-        .input-card-label {
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 14px;
-            color: var(--text);
-            letter-spacing: -0.1px;
-        }
-        .input-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .input-field {
-            flex: 1;
-            min-width: 200px;
-            padding: 13px 16px;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            background: var(--input-bg);
-            color: var(--text);
-            font-size: 0.95rem;
-            font-family: var(--font);
-            transition: all var(--transition);
-            outline: none;
-        }
-        .input-field:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(199, 62, 62, 0.08);
-        }
-        .input-field.error {
-            border-color: #e05555;
-            animation: shake 0.5s ease;
-        }
-        @keyframes shake {
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-            20% {
-                transform: translateX(-6px);
-            }
-            40% {
-                transform: translateX(6px);
-            }
-            60% {
-                transform: translateX(-4px);
-            }
-            80% {
-                transform: translateX(4px);
-            }
-        }
-
-        .btn {
-            padding: 12px 22px;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all var(--transition);
-            font-family: var(--font);
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            letter-spacing: -0.1px;
-        }
-        .btn:active {
-            transform: scale(0.96);
-        }
-        .btn-primary {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            border-color: var(--accent-hover);
-            box-shadow: 0 4px 16px rgba(199, 62, 62, 0.25);
-        }
-        .btn-outline {
-            background: var(--surface);
-            color: var(--text);
-            border-color: var(--border-strong);
-        }
-        .btn-outline:hover {
-            background: var(--surface-hover);
-            border-color: var(--text-muted);
-        }
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            border-radius: 20px;
-        }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        .error-message {
-            color: #e05555;
-            font-size: 0.85rem;
-            margin-top: 8px;
-            min-height: 20px;
-            font-weight: 500;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2.5px solid rgba(255, 255, 255, 0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        .btn-outline .spinner {
-            border-color: rgba(0, 0, 0, 0.15);
-            border-top-color: var(--text);
-        }
-        body.dark .btn-outline .spinner {
-            border-color: rgba(255, 255, 255, 0.2);
-            border-top-color: #fff;
-        }
-
-        .result-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            box-shadow: var(--shadow);
-            animation: fadeSlideIn 0.4s ease;
-            position: relative;
-            transition: all var(--transition);
-        }
-        .result-card.hidden {
-            display: none;
-        }
-        @keyframes fadeSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .result-new-link-btn {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            background: var(--surface);
-            color: var(--text);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: all var(--transition);
-            z-index: 5;
-        }
-        .result-new-link-btn:hover {
-            background: var(--accent-light);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-        .result-layout {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            align-items: flex-start;
-        }
-        .result-video-wrapper {
-            flex-shrink: 0;
-            width: 100%;
-            max-width: 100%;
-            border-radius: var(--radius);
-            overflow: hidden;
-            background: #000;
-            box-shadow: var(--shadow-sm);
-            border: 2px solid var(--border);
-        }
-        .result-video-wrapper video {
-            width: 100%;
-            display: block;
-            border-radius: var(--radius);
-            max-height: 400px;
-            object-fit: contain;
-        }
-        @media (min-width: 768px) {
-            .result-video-wrapper {
-                width: 220px;
-                max-width: 220px;
-                flex-shrink: 0;
-            }
-            .result-video-wrapper video {
-                max-height: 180px;
-            }
-        }
-        .result-info {
-            flex: 1;
-            min-width: 200px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .result-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--text);
-            line-height: 1.3;
-            word-break: break-word;
-        }
-        .result-channel {
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .result-channel i {
-            color: var(--accent);
-            font-size: 0.85rem;
-        }
-        .result-dl-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 4px;
-        }
-        .result-dl-buttons .btn {
-            font-size: 0.85rem;
-            padding: 9px 16px;
-            border-radius: 22px;
-        }
-
-        .section-title {
-            text-align: center;
-            font-weight: 700;
-            font-size: 1.4rem;
-            margin: 40px 0 20px;
-            color: var(--text);
-            letter-spacing: -0.2px;
-        }
-        .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
-            margin-bottom: 32px;
-        }
-        @media (min-width: 640px) {
-            .steps-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        @media (min-width: 1024px) {
-            .steps-grid {
-                grid-template-columns: repeat(5, 1fr);
-                gap: 16px;
-            }
-        }
-        .step-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px 14px;
-            text-align: center;
-            transition: all var(--transition);
-            position: relative;
-            box-shadow: var(--shadow-sm);
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        .step-card.visible {
-            opacity: 1;
-            transform: translateY(0);
-            transition: all 0.5s ease;
-        }
-        .step-card:hover {
-            box-shadow: var(--shadow);
-            border-color: var(--border-strong);
-            transform: translateY(-2px);
-        }
-        .step-badge {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: #fff;
-            font-weight: 700;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-sm);
-        }
-        .step-icon-circle {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #fdf2f2;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            margin: 0 auto 10px;
-        }
-        body.dark .step-icon-circle {
-            background: #2a1f1f;
-            color: #e05555;
-        }
-        .step-card h4 {
-            font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 4px;
-            color: var(--text);
-        }
-        .step-card p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        .faq-section {
-            margin-bottom: 32px;
-        }
-        .faq-item {
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            margin-bottom: 10px;
-            background: var(--surface);
-            overflow: hidden;
-            transition: all var(--transition);
-            box-shadow: var(--shadow-sm);
-        }
-        .faq-question {
-            width: 100%;
-            background: none;
-            border: none;
-            padding: 16px 18px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--text);
-            font-family: var(--font);
-            text-align: left;
-            transition: all var(--transition);
-            gap: 12px;
-        }
-        .faq-question:hover {
-            background: var(--surface-hover);
-        }
-        .faq-question i {
-            transition: transform 0.3s ease;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            flex-shrink: 0;
-        }
-        .faq-item.open .faq-question i {
-            transform: rotate(180deg);
-            color: var(--accent);
-        }
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.35s ease, padding 0.35s ease;
-            padding: 0 18px;
-        }
-        .faq-item.open .faq-answer {
-            max-height: 200px;
-            padding: 0 18px 16px;
-        }
-        .faq-answer p {
-            font-size: 0.88rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .app-footer {
-            text-align: center;
-            padding: 20px 16px 32px;
-            border-top: 2px solid var(--border);
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 14px;
-        }
-        .app-footer button {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-family: var(--font);
-            transition: color var(--transition);
-            font-weight: 500;
-        }
-        .app-footer button:hover {
-            color: var(--accent);
-            text-decoration: underline;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: var(--overlay-bg);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
-        }
-        .modal-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .modal-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 28px 24px;
-            max-width: 520px;
-            width: 100%;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            max-height: 80vh;
-            overflow-y: auto;
-            transform: translateY(20px);
-            transition: transform 0.3s ease;
-        }
-        .modal-overlay.open .modal-card {
-            transform: translateY(0);
-        }
-        .modal-close {
-            position: absolute;
-            top: 12px;
-            right: 14px;
-            background: none;
-            border: none;
-            font-size: 1.4rem;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: color var(--transition);
-        }
-        .modal-close:hover {
-            color: var(--accent);
-        }
-        .modal-card h3 {
-            margin-bottom: 12px;
-            font-size: 1.2rem;
-            color: var(--text);
-        }
-        .modal-card p {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 3000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-        }
-        .toast {
-            background: var(--toast-bg);
-            color: var(--toast-text);
-            padding: 14px 20px;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            box-shadow: var(--shadow-lg);
-            animation: toastIn 0.35s ease, toastOut 0.35s ease 2.8s forwards;
-            pointer-events: auto;
-            max-width: 380px;
-            word-break: break-word;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toast.success {
-            border-left: 4px solid #4caf50;
-        }
-        .toast.error {
-            border-left: 4px solid #e05555;
-        }
-        @keyframes toastIn {
-            from {
-                opacity: 0;
-                transform: translateX(60px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        @keyframes toastOut {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(60px);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .navbar-links {
-                display: none;
-            }
-            .hamburger {
-                display: flex;
-            }
-            .input-row {
-                flex-direction: column;
-            }
-            .result-layout {
-                flex-direction: column;
-            }
-            .result-video-wrapper {
-                width: 100%;
-                max-width: 100%;
-            }
-            .result-video-wrapper video {
-                max-height: 300px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>YourTube - YouTube Video Downloader</title>
+  <meta name="description" content="Download YouTube videos in HD quality, MP3, batch downloads, and entire channels. No watermark, fast and free." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶️</text></svg>" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <nav class="navbar" id="navbar">
-        <a href="#" class="navbar-brand"><i class="fa-brands fa-youtube"></i> YouDown</a>
-        <ul class="navbar-links" id="navbarLinks">
-            <li><a href="#home" class="active">Home</a></li>
-            <li><a href="#faq-section">Q&A</a></li>
-        </ul>
-        <div class="navbar-actions">
-            <button class="btn-icon" id="themeToggle" title="Toggle theme"><i class="fa-solid fa-moon"></i></button>
-            <button class="btn-icon hamburger" id="hamburgerBtn"><i class="fa-solid fa-bars"></i></button>
+  <div class="noise-bg"></div>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <a href="#" class="logo-link" id="backToHomeBtn" style="display:none;">
+          <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <a href="#" class="logo-link logo-home">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff0000'%3E%3Cpath d='M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z'/%3E%3C/svg%3E" alt="logo" class="logo-img" />
+          <span class="brand-name">YourTube</span>
+        </a>
+      </div>
+      <nav class="nav" id="mainNav">
+        <a href="#" class="nav-link active" data-page="home">Home</a>
+        <a href="#" class="nav-link" data-page="qa">Q&A</a>
+        <div class="nav-dropdown" id="toolsDropdown">
+          <a href="#" class="nav-link dropdown-toggle">Tools <i class="fas fa-chevron-down"></i></a>
+          <div class="dropdown-menu">
+            <a href="#">Instagram Downloader</a>
+            <a href="#">Facebook Downloader</a>
+            <a href="#">TikTok Downloader</a>
+            <a href="#">Snapchat Downloader</a>
+            <a href="#">Twitter Downloader</a>
+            <a href="#">Vimeo Downloader</a>
+          </div>
         </div>
-    </nav>
+        <a href="#" class="nav-link" data-page="blog">Blog</a>
+      </nav>
+      <div class="header-right">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </header>
 
+    <!-- Side Drawer -->
+    <div class="side-drawer" id="sideDrawer">
+      <div class="drawer-header">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff0000'%3E%3Cpath d='M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z'/%3E%3C/svg%3E" alt="logo" class="logo-img" />
+        <span class="brand-name">YourTube</span>
+      </div>
+      <nav class="drawer-nav">
+        <a href="#" class="drawer-link" data-page="home">Home</a>
+        <a href="#" class="drawer-link" data-page="qa">Q&A</a>
+        <a href="#" class="drawer-link" data-page="blog">Blog</a>
+        <button class="drawer-link theme-toggle-drawer" id="themeToggleDrawer">
+          <i class="fas fa-moon"></i> Dark Mode
+        </button>
+      </nav>
+    </div>
     <div class="drawer-overlay" id="drawerOverlay"></div>
-    <div class="drawer" id="drawer">
-        <button class="drawer-close" id="drawerClose">&times;</button>
-        <a href="#home" class="drawer-link">Home</a>
-        <a href="#faq-section" class="drawer-link">Q&A</a>
-    </div>
 
-    <div class="main-container" id="home">
-        <div class="input-card" id="inputCard">
-            <div class="input-card-label"><i class="fa-solid fa-link"></i> Paste YouTube video URL</div>
+    <!-- Main Content -->
+    <main id="mainContent">
+      <!-- Home Page -->
+      <section id="homeSection" class="home-section">
+        <!-- Hero -->
+        <div class="hero">
+          <div class="badge"><i class="fas fa-check-circle"></i> No Watermark · HD Quality</div>
+          <h1 class="hero-title">YouTube Video Downloader</h1>
+          <p class="hero-subtitle">Download videos in best quality, extract audio, batch download multiple URLs, or grab a whole channel.</p>
+          <div class="mode-selector" id="modeSelector">
+            <button class="mode-btn" data-mode="single">Single Video Download <i class="fas fa-chevron-down"></i></button>
+            <div class="mode-dropdown">
+              <div class="mode-option" data-mode="single"><i class="fas fa-video"></i> Single Video Download</div>
+              <div class="mode-option" data-mode="batch"><i class="fas fa-layer-group"></i> Batch Download (Multiple URLs)</div>
+              <div class="mode-option" data-mode="channel"><i class="fas fa-folder"></i> Channel Download</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Containers -->
+        <div class="input-containers">
+          <!-- Single mode -->
+          <div class="input-container active" data-mode="single" id="singleInput">
+            <label for="singleUrl">Paste YouTube video URL</label>
             <div class="input-row">
-                <input type="text" class="input-field" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
-                <button class="btn btn-outline btn-sm" id="pasteBtn"><i class="fa-solid fa-paste"></i> Paste</button>
-                <button class="btn btn-primary" id="downloadBtn"><i class="fa-solid fa-download"></i> Download</button>
+              <input type="text" id="singleUrl" placeholder="https://www.youtube.com/watch?v=..." />
+              <button class="btn-primary" id="singleDownloadBtn"><i class="fas fa-download"></i> Paste & Download</button>
             </div>
-            <div class="error-message" id="errorMessage"></div>
-        </div>
+            <div class="error-box" id="singleError" style="display:none;"></div>
+          </div>
 
-        <div class="result-card hidden" id="resultCard">
-            <button class="result-new-link-btn" id="newLinkBtn" title="New Link"><i class="fa-solid fa-plus"></i></button>
-            <div class="result-layout">
-                <div class="result-video-wrapper" id="videoWrapper">
-                    <video id="videoPlayer" controls playsinline preload="metadata"></video>
-                </div>
-                <div class="result-info">
-                    <div class="result-title" id="resultTitle">-</div>
-                    <div class="result-channel" id="resultChannel"><i class="fa-solid fa-user"></i> <span>-</span></div>
-                    <div class="result-dl-buttons" id="resultButtons"></div>
-                </div>
+          <!-- Batch mode -->
+          <div class="input-container" data-mode="batch" id="batchInput">
+            <label for="batchUrls">Paste multiple YouTube URLs (one per line)</label>
+            <textarea id="batchUrls" rows="5" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
+            <button class="btn-primary" id="batchFetchBtn"><i class="fas fa-search"></i> Fetch Videos</button>
+            <div class="batch-progress" id="batchProgress" style="display:none;"></div>
+            <div class="batch-list" id="batchList"></div>
+            <div class="batch-actions" id="batchActions" style="display:none;">
+              <button class="btn-primary" id="batchDownloadSelectedBtn"><i class="fas fa-download"></i> Download Selected</button>
+              <span class="batch-summary" id="batchSummary"></span>
             </div>
+          </div>
+
+          <!-- Channel mode -->
+          <div class="input-container" data-mode="channel" id="channelInput">
+            <label for="channelUrl">Paste YouTube channel URL</label>
+            <input type="text" id="channelUrl" placeholder="https://www.youtube.com/@channelname" />
+            <button class="btn-primary" id="channelFetchBtn"><i class="fas fa-search"></i> Fetch Videos</button>
+            <div class="batch-progress" id="channelProgress" style="display:none;"></div>
+            <div class="batch-list" id="channelList"></div>
+            <div class="batch-actions" id="channelActions" style="display:none;">
+              <button class="btn-primary" id="channelDownloadSelectedBtn"><i class="fas fa-download"></i> Download Selected</button>
+              <span class="batch-summary" id="channelSummary"></span>
+            </div>
+          </div>
         </div>
 
-        <h2 class="section-title">How to Use</h2>
-        <div class="steps-grid" id="stepsGrid">
-            <div class="step-card" data-step="1"><span class="step-badge">1</span><div class="step-icon-circle"><i class="fa-solid fa-magnifying-glass"></i></div><h4>Find Video</h4><p>Open YouTube and find the video</p></div>
-            <div class="step-card" data-step="2"><span class="step-badge">2</span><div class="step-icon-circle"><i class="fa-solid fa-copy"></i></div><h4>Copy Link</h4><p>Tap Share & copy URL</p></div>
-            <div class="step-card" data-step="3"><span class="step-badge">3</span><div class="step-icon-circle"><i class="fa-solid fa-paste"></i></div><h4>Paste URL</h4><p>Paste the link above</p></div>
-            <div class="step-card" data-step="4"><span class="step-badge">4</span><div class="step-icon-circle"><i class="fa-solid fa-download"></i></div><h4>Click Download</h4><p>Hit the button</p></div>
-            <div class="step-card" data-step="5"><span class="step-badge">5</span><div class="step-icon-circle"><i class="fa-solid fa-floppy-disk"></i></div><h4>Save Video</h4><p>Choose quality & save</p></div>
+        <!-- Result Card (Single) -->
+        <div class="result-card" id="resultCard" style="display:none;">
+          <div class="result-video" id="resultPlayer"></div>
+          <div class="result-info">
+            <h3 class="result-title" id="resultTitle" title="Click to copy full title">Video Title</h3>
+            <p class="result-channel" id="resultChannel">Channel Name</p>
+            <div class="result-actions">
+              <button class="btn-download" id="downloadHdBtn"><i class="fas fa-video"></i> Download HD</button>
+              <button class="btn-download" id="downloadMp3Btn"><i class="fas fa-music"></i> Download MP3</button>
+            </div>
+          </div>
+          <button class="btn-new-link" id="newLinkBtn"><i class="fas fa-plus"></i> New Link</button>
         </div>
 
-        <h2 class="section-title" id="faq-section">Frequently Asked Questions</h2>
-        <div class="faq-section" id="faqContainer">
-            <div class="faq-item"><button class="faq-question">Is YouDown free? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Yes, completely free.</p></div></div>
-            <div class="faq-item"><button class="faq-question">What qualities? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>360p, 720p, 1080p, audio.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Is it safe? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Yes, no data stored.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Need an account? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>No account required.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Mobile support? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Fully responsive.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Download not starting? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Check URL validity.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Shorts? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Yes, supported.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Age-restricted? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>May require login.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Legal? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>Check YouTube's terms.</p></div></div>
-            <div class="faq-item"><button class="faq-question">Browsers? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-answer"><p>All modern browsers.</p></div></div>
-        </div>
-    </div>
+        <!-- Steps Section -->
+        <section class="steps-section" id="stepsSection">
+          <div class="step-card" data-animate>
+            <div class="step-number">1</div>
+            <h3>Paste Video URL</h3>
+            <p>Copy the YouTube video link and paste it into the input field. We support all YouTube URL formats.</p>
+          </div>
+          <div class="step-card" data-animate>
+            <div class="step-number">2</div>
+            <h3>Choose Quality</h3>
+            <p>Select HD video or extract audio as MP3. Preview the video before you download.</p>
+          </div>
+          <div class="step-card" data-animate>
+            <div class="step-number">3</div>
+            <h3>Download</h3>
+            <p>Click download and watch the real‑time progress. Your file will be saved directly to your device.</p>
+          </div>
+        </section>
 
-    <footer class="app-footer">
-        <button data-modal="disclaimer">Disclaimer</button>
-        <button data-modal="privacy">Privacy</button>
-        <button data-modal="terms">Terms</button>
-        <button data-modal="about">About</button>
+        <!-- Q&A Accordion -->
+        <section class="qa-section" id="qaSection">
+          <h2>Frequently Asked Questions</h2>
+          <div class="qa-item">
+            <button class="qa-question">Is it free to download YouTube videos? <i class="fas fa-chevron-down"></i></button>
+            <div class="qa-answer"><p>Yes, our tool is completely free. We don't charge anything and there are no hidden fees.</p></div>
+          </div>
+          <div class="qa-item">
+            <button class="qa-question">Can I download an entire YouTube channel? <i class="fas fa-chevron-down"></i></button>
+            <div class="qa-answer"><p>Yes, switch to Channel Download mode, paste the channel URL, and we'll fetch up to 50 videos for you to download.</p></div>
+          </div>
+          <div class="qa-item">
+            <button class="qa-question">What quality can I download? <i class="fas fa-chevron-down"></i></button>
+            <div class="qa-answer"><p>We provide the best available HD quality (up to 1080p) and an audio‑only MP3 option.</p></div>
+          </div>
+        </section>
+
+        <!-- Download History -->
+        <section class="history-section" id="historySection" style="display:none;">
+          <h2>Download History</h2>
+          <div class="history-list" id="historyList"></div>
+        </section>
+      </section>
+
+      <!-- Blog Page (hidden initially) -->
+      <section id="blogSection" class="blog-section" style="display:none;">
+        <div class="blog-content" id="blogContent">
+          <div class="loading">Loading blog...</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="#" class="modal-link" data-modal="disclaimer">Disclaimer</a>
+        <a href="#" class="modal-link" data-modal="privacy">Privacy</a>
+        <a href="#" class="modal-link" data-modal="terms">Terms</a>
+        <a href="#" class="modal-link" data-modal="about">About</a>
+        <a href="#" data-page="blog">Blog</a>
+      </div>
+      <p class="footer-copy">© 2025 YourTube · Powered by RapidAPI</p>
     </footer>
 
-    <div class="modal-overlay" id="modalDisclaimer"><div class="modal-card"><button class="modal-close" data-close>&times;</button><h3>Disclaimer</h3><p>Educational tool. Not affiliated with YouTube.</p></div></div>
-    <div class="modal-overlay" id="modalPrivacy"><div class="modal-card"><button class="modal-close" data-close>&times;</button><h3>Privacy</h3><p>No data collected.</p></div></div>
-    <div class="modal-overlay" id="modalTerms"><div class="modal-card"><button class="modal-close" data-close>&times;</button><h3>Terms</h3><p>Use responsibly.</p></div></div>
-    <div class="modal-overlay" id="modalAbout"><div class="modal-card"><button class="modal-close" data-close>&times;</button><h3>About</h3><p>Minimalist YouTube downloader with dual API support.</p></div></div>
-
+    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script>
-        (function() {
-            // ============ API CONFIGURATION ============
-            const API_CONFIG = {
-                videoDetailsEndpoint: 'https://youtube-media-downloader.p.rapidapi.com/v2/video/details',
-                mp3DownloadEndpoint: 'https://youtube-mp3-audio-video-downloader.p.rapidapi.com/get_mp3_download_link',
-                key: '23d7792dfamshac4ad4751a68f49p1438c8jsn17a353c04fbd',
-                videoHost: 'youtube-media-downloader.p.rapidapi.com',
-                mp3Host: 'youtube-mp3-audio-video-downloader.p.rapidapi.com'
-            };
+    <!-- Modal Container -->
+    <div class="modal-overlay" id="modalOverlay" style="display:none;">
+      <div class="modal">
+        <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+        <div class="modal-content" id="modalContent"></div>
+      </div>
+    </div>
+  </div>
 
-            const $ = (s) => document.querySelector(s);
-            const $$ = (s) => document.querySelectorAll(s);
-
-            const urlInput = $('#urlInput');
-            const pasteBtn = $('#pasteBtn');
-            const downloadBtn = $('#downloadBtn');
-            const errorMessage = $('#errorMessage');
-            const inputCard = $('#inputCard');
-            const resultCard = $('#resultCard');
-            const newLinkBtn = $('#newLinkBtn');
-            const videoPlayer = $('#videoPlayer');
-            const resultTitle = $('#resultTitle');
-            const resultChannel = $('#resultChannel span');
-            const resultButtons = $('#resultButtons');
-            const themeToggle = $('#themeToggle');
-            const hamburgerBtn = $('#hamburgerBtn');
-            const drawer = $('#drawer');
-            const drawerOverlay = $('#drawerOverlay');
-            const drawerClose = $('#drawerClose');
-            const toastContainer = $('#toastContainer');
-            const stepCards = $$('.step-card');
-            const faqContainer = $('#faqContainer');
-            const modalOverlays = $$('.modal-overlay');
-
-            let isDownloading = false;
-
-            // ============ THEME ============
-            function applyTheme(mode) {
-                if (mode === 'dark') {
-                    document.body.classList.add('dark');
-                    themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
-                } else {
-                    document.body.classList.remove('dark');
-                    themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
-                }
-                localStorage.setItem('youdown-theme', mode);
-            }
-            const savedTheme = localStorage.getItem('youdown-theme') || 'light';
-            applyTheme(savedTheme);
-            themeToggle.addEventListener('click', () => {
-                const current = document.body.classList.contains('dark') ? 'dark' : 'light';
-                applyTheme(current === 'dark' ? 'light' : 'dark');
-            });
-
-            // ============ DRAWER ============
-            function openDrawer() {
-                drawer.classList.add('open');
-                drawerOverlay.classList.add('open');
-                document.body.style.overflow = 'hidden';
-            }
-            function closeDrawer() {
-                drawer.classList.remove('open');
-                drawerOverlay.classList.remove('open');
-                document.body.style.overflow = '';
-            }
-            hamburgerBtn.addEventListener('click', openDrawer);
-            drawerClose.addEventListener('click', closeDrawer);
-            drawerOverlay.addEventListener('click', closeDrawer);
-            document.querySelectorAll('.drawer-link').forEach(link => link.addEventListener('click', closeDrawer));
-
-            // ============ TOAST ============
-            function showToast(message, type = 'success') {
-                const toast = document.createElement('div');
-                toast.className = `toast ${type}`;
-                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i> ${message}`;
-                toastContainer.appendChild(toast);
-                setTimeout(() => toast.remove(), 3300);
-            }
-
-            // ============ ERROR ============
-            function showError(msg) {
-                errorMessage.textContent = msg;
-                urlInput.classList.add('error');
-                setTimeout(() => urlInput.classList.remove('error'), 500);
-            }
-            function clearError() {
-                errorMessage.textContent = '';
-                urlInput.classList.remove('error');
-            }
-
-            // ============ CLIPBOARD ============
-            async function handlePaste() {
-                clearError();
-                try {
-                    const permission = await navigator.permissions.query({ name: 'clipboard-read' });
-                    if (permission.state === 'denied') {
-                        showToast('Clipboard access denied. Paste manually.', 'error');
-                        return;
-                    }
-                    const text = await navigator.clipboard.readText();
-                    if (text.trim()) {
-                        urlInput.value = text.trim();
-                        showToast('URL pasted!', 'success');
-                    } else {
-                        showToast('Clipboard empty.', 'error');
-                    }
-                } catch {
-                    showToast('Could not read clipboard. Use Ctrl+V.', 'error');
-                }
-                urlInput.focus();
-            }
-            pasteBtn.addEventListener('click', handlePaste);
-
-            // ============ URL VALIDATION ============
-            function isValidYouTubeURL(url) {
-                return /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/|embed\/)|youtu\.be\/)[\w\-]{11}/i.test(url);
-            }
-
-            // ============ EXTRACT VIDEO ID ============
-            function extractVideoId(url) {
-                const match = url.match(/(?:v=|\/|youtu\.be\/)([0-9A-Za-z_-]{11})/);
-                return match ? match[1] : null;
-            }
-
-            // ============ DOWNLOAD HANDLER (DUAL API) ============
-            async function handleDownload() {
-                if (isDownloading) return;
-                clearError();
-                const url = urlInput.value.trim();
-                if (!url) {
-                    showError('Please enter a YouTube video URL.');
-                    return;
-                }
-                if (!isValidYouTubeURL(url)) {
-                    showError('Invalid YouTube URL.');
-                    return;
-                }
-                isDownloading = true;
-                downloadBtn.disabled = true;
-                downloadBtn.innerHTML = '<span class="spinner"></span> Fetching...';
-
-                try {
-                    const videoId = extractVideoId(url);
-                    if (!videoId) throw new Error('Could not extract video ID.');
-
-                    // Fetch video details (format info + channel name)
-                    const videoResponse = await fetch(`${API_CONFIG.videoDetailsEndpoint}?videoId=${videoId}`, {
-                        method: 'GET',
-                        headers: {
-                            'x-rapidapi-key': API_CONFIG.key,
-                            'x-rapidapi-host': API_CONFIG.videoHost,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    if (!videoResponse.ok) {
-                        const errText = await videoResponse.text();
-                        throw new Error(`Video API error (${videoResponse.status}): ${errText.substring(0, 120)}`);
-                    }
-                    const videoData = await videoResponse.json();
-                    console.log('Video details:', videoData);
-
-                    const title = videoData.title || 'Unknown Title';
-                    const author = videoData.channelTitle || videoData.channel || 'Unknown Channel';
-                    let formats = [];
-                    if (videoData.videos && Array.isArray(videoData.videos.items)) {
-                        formats = videoData.videos.items;
-                    }
-                    if (!formats.length) throw new Error('No downloadable formats found.');
-
-                    // Fetch MP3 download link (second API)
-                    let mp3Url = null;
-                    try {
-                        const mp3Response = await fetch(`${API_CONFIG.mp3DownloadEndpoint}/${videoId}?quality=low&wait_until_the_file_is_ready=false`, {
-                            method: 'GET',
-                            headers: {
-                                'x-rapidapi-key': API_CONFIG.key,
-                                'x-rapidapi-host': API_CONFIG.mp3Host,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        if (mp3Response.ok) {
-                            const mp3Data = await mp3Response.json();
-                            console.log('MP3 API response:', mp3Data);
-                            // The API might return a link field or a direct URL string
-                            if (typeof mp3Data === 'string') {
-                                mp3Url = mp3Data;
-                            } else if (mp3Data.link) {
-                                mp3Url = mp3Data.link;
-                            } else if (mp3Data.url) {
-                                mp3Url = mp3Data.url;
-                            }
-                        }
-                    } catch (mp3Error) {
-                        console.warn('MP3 API failed, continuing without audio:', mp3Error);
-                    }
-
-                    // Build format buttons
-                    const hd = formats.find(f => f.quality?.includes('1080')) || formats.find(f => f.quality?.includes('720')) || formats[0];
-                    const sd = formats.find(f => f.quality?.includes('360')) || formats.find(f => f.quality?.includes('480')) || null;
-                    const playerUrl = hd.url;
-
-                    // Populate UI
-                    resultTitle.textContent = title;
-                    resultChannel.textContent = author;
-                    videoPlayer.innerHTML = '';
-                    if (playerUrl) {
-                        const source = document.createElement('source');
-                        source.src = playerUrl;
-                        source.type = 'video/mp4';
-                        videoPlayer.appendChild(source);
-                        videoPlayer.load();
-                    }
-
-                    resultButtons.innerHTML = '';
-                    const addedUrls = new Set();
-                    function addButton(label, link, primary = false) {
-                        if (!link || addedUrls.has(link)) return;
-                        addedUrls.add(link);
-                        const btn = document.createElement('button');
-                        btn.className = `btn ${primary ? 'btn-primary' : 'btn-outline'} btn-sm`;
-                        btn.innerHTML = `<i class="fa-solid fa-download"></i> ${label}`;
-                        btn.addEventListener('click', () => window.open(link, '_blank'));
-                        resultButtons.appendChild(btn);
-                    }
-
-                    if (hd) addButton('HD Video', hd.url, true);
-                    if (sd && sd.url !== hd?.url) addButton('SD Video', sd.url);
-                    if (mp3Url) addButton('Audio MP3', mp3Url);
-                    // Add remaining formats as fallback
-                    formats.forEach(f => {
-                        if (!addedUrls.has(f.url)) addButton(f.quality || 'Download', f.url);
-                    });
-
-                    inputCard.classList.add('hidden');
-                    resultCard.classList.remove('hidden');
-                    resultCard.style.animation = 'none';
-                    resultCard.offsetHeight;
-                    resultCard.style.animation = 'fadeSlideIn 0.4s ease';
-                    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    showToast('Video ready! 🎉', 'success');
-                } catch (err) {
-                    console.error(err);
-                    showError(err.message);
-                    showToast(err.message, 'error');
-                } finally {
-                    isDownloading = false;
-                    downloadBtn.disabled = false;
-                    downloadBtn.innerHTML = '<i class="fa-solid fa-download"></i> Download';
-                }
-            }
-
-            downloadBtn.addEventListener('click', handleDownload);
-            urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleDownload(); });
-
-            // ============ NEW LINK RESET ============
-            newLinkBtn.addEventListener('click', () => {
-                resultCard.classList.add('hidden');
-                inputCard.classList.remove('hidden');
-                urlInput.value = '';
-                clearError();
-                videoPlayer.innerHTML = '';
-                resultButtons.innerHTML = '';
-                resultTitle.textContent = '-';
-                resultChannel.textContent = '-';
-                urlInput.focus();
-                window.scrollTo({ top: inputCard.offsetTop - 80, behavior: 'smooth' });
-            });
-
-            // ============ STEPS ANIMATION ============
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const card = entry.target;
-                        const step = parseInt(card.dataset.step || 1);
-                        setTimeout(() => card.classList.add('visible'), (step - 1) * 80);
-                        observer.unobserve(card);
-                    }
-                });
-            }, { threshold: 0.2 });
-            stepCards.forEach(card => observer.observe(card));
-
-            // ============ FAQ ACCORDION ============
-            faqContainer.addEventListener('click', (e) => {
-                const q = e.target.closest('.faq-question');
-                if (!q) return;
-                const item = q.closest('.faq-item');
-                const wasOpen = item.classList.contains('open');
-                $$('.faq-item.open').forEach(i => i.classList.remove('open'));
-                if (!wasOpen) item.classList.add('open');
-            });
-
-            // ============ MODALS ============
-            function openModal(id) {
-                const modal = document.getElementById(id);
-                if (modal) {
-                    modal.classList.add('open');
-                    document.body.style.overflow = 'hidden';
-                }
-            }
-            function closeAllModals() {
-                modalOverlays.forEach(m => m.classList.remove('open'));
-                document.body.style.overflow = '';
-            }
-            document.querySelectorAll('.app-footer button[data-modal]').forEach(btn => {
-                btn.addEventListener('click', () => openModal('modal' + btn.dataset.modal.charAt(0).toUpperCase() + btn.dataset.modal.slice(1)));
-            });
-            document.querySelectorAll('.modal-close[data-close]').forEach(btn => btn.addEventListener('click', closeAllModals));
-            modalOverlays.forEach(overlay => overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAllModals(); }));
-            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllModals(); });
-
-            // ============ NAV ACTIVE LINK ============
-            document.querySelectorAll('#navbarLinks a').forEach(link => {
-                link.addEventListener('click', function() {
-                    document.querySelectorAll('#navbarLinks a').forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-
-            setTimeout(() => urlInput.focus(), 400);
-        })();
-    </script>
+  <script src="js/app.js"></script>
 </body>
 </html>
