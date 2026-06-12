@@ -51,33 +51,27 @@
   /* ===================================================================
      3. SKULL THEME TOGGLE
      =================================================================== */
-const skullCheckbox = document.getElementById('themeToggleCheckbox');
-const skullCheckboxDrawer = document.getElementById('themeToggleCheckboxDrawer');
+// ============ SKULL THEME TOGGLE ============
+const skullToggle = document.getElementById('skullThemeToggle');
+const skullToggleDrawer = document.getElementById('skullThemeToggleDrawer');
 
-// Set initial checkbox state based on stored theme
-function updateSkullCheckboxes(theme) {
-    const isDark = theme === 'dark';
-    if (skullCheckbox) skullCheckbox.checked = isDark;
-    if (skullCheckboxDrawer) skullCheckboxDrawer.checked = isDark;
-}
+// Set initial state
+const savedTheme = localStorage.getItem('snapytok-theme') || 'light';
+if (skullToggle) skullToggle.checked = savedTheme === 'dark';
+if (skullToggleDrawer) skullToggleDrawer.checked = savedTheme === 'dark';
 
-// Update checkboxes when theme changes
-const oldSetTheme = setTheme;
-setTheme = function(theme) {
-    oldSetTheme(theme);
-    updateSkullCheckboxes(theme);
-};
-
-// Initialize
-updateSkullCheckboxes(localStorage.getItem('snapytok-theme') || 'light');
-
-// Listen for changes on either checkbox
-skullCheckbox.addEventListener('change', function() {
-    setTheme(this.checked ? 'dark' : 'light');
+// Header toggle
+skullToggle.addEventListener('change', function() {
+    const newTheme = this.checked ? 'dark' : 'light';
+    setTheme(newTheme);
+    if (skullToggleDrawer) skullToggleDrawer.checked = this.checked;
 });
 
-skullCheckboxDrawer.addEventListener('change', function() {
-    setTheme(this.checked ? 'dark' : 'light');
+// Drawer toggle
+skullToggleDrawer.addEventListener('change', function() {
+    const newTheme = this.checked ? 'dark' : 'light';
+    setTheme(newTheme);
+    if (skullToggle) skullToggle.checked = this.checked;
 });
 
   /* ===================================================================
