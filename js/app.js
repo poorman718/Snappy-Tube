@@ -49,31 +49,36 @@
   }
 
   /* ===================================================================
-     3. THEME TOGGLE
+     3. SKULL THEME TOGGLE
      =================================================================== */
-  const root = document.documentElement;
+const skullCheckbox = document.getElementById('themeToggleCheckbox');
+const skullCheckboxDrawer = document.getElementById('themeToggleCheckboxDrawer');
 
-  function setTheme(theme) {
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem(THEME_KEY, theme);
-  }
+// Set initial checkbox state based on stored theme
+function updateSkullCheckboxes(theme) {
+    const isDark = theme === 'dark';
+    if (skullCheckbox) skullCheckbox.checked = isDark;
+    if (skullCheckboxDrawer) skullCheckboxDrawer.checked = isDark;
+}
 
-  function toggleTheme() {
-    const current = root.getAttribute('data-theme');
-    setTheme(current === 'dark' ? 'light' : 'dark');
-  }
+// Update checkboxes when theme changes
+const oldSetTheme = setTheme;
+setTheme = function(theme) {
+    oldSetTheme(theme);
+    updateSkullCheckboxes(theme);
+};
 
-  (function initTheme() {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved) {
-      setTheme(saved);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setTheme('light');
-    }
-  })();
+// Initialize
+updateSkullCheckboxes(localStorage.getItem('snapytok-theme') || 'light');
 
-  $('#themeToggle').addEventListener('click', toggleTheme);
-  $('#drawerThemeToggle').addEventListener('click', toggleTheme);
+// Listen for changes on either checkbox
+skullCheckbox.addEventListener('change', function() {
+    setTheme(this.checked ? 'dark' : 'light');
+});
+
+skullCheckboxDrawer.addEventListener('change', function() {
+    setTheme(this.checked ? 'dark' : 'light');
+});
 
   /* ===================================================================
      4. MOBILE DRAWER
